@@ -1,0 +1,31 @@
+# 项目基础配置
+spring:
+  application:
+    name: melodify-backend 
+
+  # 数据库连接配置
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://127.0.0.1:3306/melodify?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
+    username: root
+    password: root 
+
+  # JSON 处理配置 (针对 SQL 中的 JSON 字段)
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+
+# MyBatis-Plus 配置
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true # 开启驼峰命名转换（如 user_id 映射为 userId）
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl # 在控制台打印 SQL 日志，方便调试
+  global-config:
+    db-config:
+      logic-delete-field: is_deleted # 全局逻辑删除字段名
+      logic-delete-value: 1          # 逻辑已删除值
+      logic-not-delete-value: 0      # 逻辑未删除值
+
+# 服务端配置
+server:
+  port: 8080
