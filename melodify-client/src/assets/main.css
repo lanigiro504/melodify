@@ -1,35 +1,29 @@
 @import './base.css';
 
+:root {
+  --el-color-primary: #6366f1;
+  --melodify-auth-gradient: linear-gradient(
+    155deg,
+    #141722 0%,
+    #1e2233 40%,
+    #2d324c 70%,
+    #3d4366 100%
+  );
+  --melodify-radius-lg: 12px;
+  --melodify-app-header-bg: color-mix(in srgb, var(--color-background) 88%, transparent);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --melodify-app-header-bg: color-mix(in srgb, var(--color-background) 92%, transparent);
+  }
+}
+
 #app {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  font-weight: normal;
+  width: 100%;
+  min-height: 100vh;
 }
 
-a,
-.green {
+a {
   text-decoration: none;
-  color: hsla(160, 100%, 37%, 1);
-  transition: 0.4s;
-  padding: 3px;
-}
-
-@media (hover: hover) {
-  a:hover {
-    background-color: hsla(160, 100%, 37%, 0.2);
-  }
-}
-
-@media (min-width: 1024px) {
-  body {
-    display: flex;
-    place-items: center;
-  }
-
-  #app {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    padding: 0 2rem;
-  }
 }

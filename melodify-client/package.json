@@ -12,9 +12,12 @@
     "lint": "run-s lint:*",
     "lint:oxlint": "oxlint . --fix",
     "lint:eslint": "eslint . --fix --cache",
-    "format": "prettier --write --experimental-cli src/"
+    "format": "prettier --write --experimental-cli src/",
+    "postinstall": "node ./scripts/check-node-arch.mjs"
   },
   "dependencies": {
+    "axios": "^1.15.2",
+    "element-plus": "^2.13.7",
     "pinia": "^3.0.4",
     "vue": "^3.5.32",
     "vue-router": "^5.0.4"

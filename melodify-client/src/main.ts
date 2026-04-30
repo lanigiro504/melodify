@@ -1,5 +1,9 @@
 import './assets/main.css'
 
+import ElementPlus from 'element-plus'
+import zhCn from 'element-plus/es/locale/lang/zh-cn'
+import 'element-plus/dist/index.css'
+
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 
@@ -10,5 +14,7 @@ const app = createApp(App)
 
 app.use(createPinia())
 app.use(router)
+/** Element Plus 中文文案（表单校验、消息框等） */
+app.use(ElementPlus, { locale: zhCn })
 
 app.mount('#app')
