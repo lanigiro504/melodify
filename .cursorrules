@@ -1,13 +1,35 @@
-角色: 你是 Melodify (AIGC音乐生成平台) 的资深全栈架构师。
-技术栈:
-- 后端: SpringBoot 3, Java 17, MyBatis, MySQL, Redis
-- 前端: Vue 3 (Composition API), TypeScript, Pinia, Element Plus
+角色: 你是 Melodify（AIGC 音乐生成平台）的资深全栈架构师。实现时以仓库内现有代码与 `melodify-backend/pom.xml` 为最高事实来源；本文件与之冲突时服从仓库。
 
-后端规范:
-- 严格遵循 Controller -> Service -> Mapper 的分层架构。
-- 必须包含统一返回类 Result<T>。
-- 接口路径区分: 用户端 /api/client/**，管理端 /api/admin/**。
+## 技术栈（摘要）
 
-前端规范:
-- 使用 <script setup lang="ts">。
-- 样式优先考虑 Element Plus 原生组件。
+- 后端: Spring Boot 3.x，Java 17+，MyBatis-Plus，MySQL，Redis（按需）。
+- 前端: Vue 3（Composition API），TypeScript，Pinia，Element Plus。
+
+## 后端规范
+
+- 分层: 严格 **Controller → Service → Mapper**，禁止 Controller 直接操作 Mapper。
+- 持久化: 使用 **MyBatis-Plus**（`BaseMapper`、`IService`、分页与 `LambdaQueryWrapper` 等）；表结构与迁移以 **`docs/init.sql`** 或项目内正式迁移工具为准，改实体须同步库表。
+- 统一响应: 对外 JSON 必须使用 **`com.melodify.common.result.Result<T>`**（`code`、`message`、`data`）。
+- 异常: 可预期业务失败使用 **`BizException`（带 code）** 或等价统一异常；由 **`GlobalExceptionHandler`** 转为 `Result`，**禁止**向前端返回堆栈、SQL、内部路径。
+- 入参: 对外接口优先 **DTO + `jakarta.validation`（`@Valid`）**；避免将 Entity 直接作为写接口 body（读场景可用 VO/DTO 控制字段）。登录等敏感返回须 **脱敏**（如 `password` 置空）。
+- 路径前缀: **用户端** `/api/client/**`，**管理端** `/api/admin/**`；新增接口须归入对应包（如 `controller.client` / `controller.admin`）。
+- 安全: **禁止**在代码或规则示例中写入生产密钥、真实口令。密码存储以当前仓库实现为准；若规则与实现不一致，**规划**向 BCrypt 等强哈希演进，不在此文件展开实现细节。
+- 鉴权: 用户端接口须按「当前登录用户」约束数据归属；**禁止**长期依赖调用方随意传入的 `userId` 作为唯一鉴权手段（在接入 JWT/Session 前可用过渡方案，但须在任务中注明技术债）。
+- 注释: 公共 API、非显而易见的业务规则，用 **简体中文** 写清意图与边界。
+
+## 前端规范
+
+- 脚本: 使用 `<script setup lang="ts">`；**优先 TypeScript 严格语义**，避免无必要的 `any`；组件 `props` / `emit` 须用类型声明（`defineProps` / `defineEmits` 泛型或接口）。
+- 函数风格: 在 `<script setup>` 内声明的方法、工具函数、传给 `watch` / `computed` / 数组方法的回调，**优先使用箭头函数**（`const handleX = () => {}`），保持词法 `this` 与一致性；仅在需提升、生成器、`arguments` 等特殊场景使用 `function`。
+- 常量与魔法值: 将接口路径片段、分页默认值、枚举式状态码、表格列配置、校验规则阈值等 **抽到模块级 `const`** 或独立 `constants.ts`（命名：`UPPER_SNAKE_CASE` 或语义化对象）；**禁止**在模板与业务逻辑中散落硬编码字符串/数字（短生命周期 UI 文案可本地 `const`）。
+- 可复用逻辑: 跨组件的状态与副作用抽成 **`composables`（`useXxx`）**；单文件过长时拆分子组件或 `utils`，避免「巨石 SFC」。
+- 响应式: **`ref` 与 `reactive` 择一为主**（团队默认 `ref` primitive / 单值对象亦可），避免对解构丢失响应式；需要解构时用 `storeToRefs`（Pinia）或 `toRefs`。
+- 异步: API 调用集中经封装层（如 `api/*.ts`）；组件内 **`async` 函数用 `try/catch/finally`** 处理错误与 loading，错误信息对用户可读；避免裸露的 floating promise。
+- UI: 样式与交互优先 **Element Plus** 原生能力；样式优先 **scoped**；复杂样式用语义化 class，避免过深嵌套。
+- HTTP: 使用与后端 **`Result`** 一致的响应解包（`code` / `message` / `data`）；401/403 等与路由/登录态协调处理；列表类接口与后端分页字段命名对齐。
+- 可读性: **早返回**减少嵌套；单个函数单职责；命名体现业务含义（中英皆可，与现有前端目录一致）；必要处用 **简体中文** 注释说明非显然的业务规则。
+
+## AI 生成代码时的约束
+
+- 仅为完成任务所需的最小改动；不做无关重构；不擅自新增未要求的依赖或文档文件。
+- 命名、包结构、风格与现有 `com.melodify` 代码保持一致。
