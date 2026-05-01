@@ -3,7 +3,6 @@
  * 主布局：产品化顶栏 + 背景装饰 + 个人资料抽屉。
  */
 import type { FormInstance, FormRules } from 'element-plus'
-import { ElMessage } from 'element-plus'
 import { storeToRefs } from 'pinia'
 import { reactive, ref, watch } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
@@ -50,15 +49,14 @@ watch(
 
 const openProfile = () => {
   profileVisible.value = true
-  void refreshProfile(false)
+  void refreshProfile()
 }
 
-const refreshProfile = async (showSuccess = true) => {
+const refreshProfile = async () => {
   if (!isAuthenticated.value) return
   refreshingProfile.value = true
   try {
     await auth.refreshMe()
-    if (showSuccess) ElMessage.success('资料已刷新')
   } catch (e) {
     showSubmitError(e, '刷新资料失败')
   } finally {
@@ -76,7 +74,6 @@ const saveProfile = async () => {
       email: profileForm.email.trim(),
       phone: profileForm.phone.trim(),
     })
-    ElMessage.success('资料已更新')
     profileVisible.value = false
   } catch (e) {
     showSubmitError(e, '保存资料失败')
@@ -115,7 +112,7 @@ const onLogout = () => {
 
         <div class="header-actions">
           <template v-if="isAuthenticated">
-            <button type="button" class="user-pill" @click="openProfile">
+        <button type="button" class="user-pill" :aria-expanded="profileVisible ? 'true' : 'false'" @click="openProfile">
               <span class="avatar" :style="currentUser?.avatar ? { backgroundImage: `url(${currentUser.avatar})` } : {}">
                 <span v-if="!currentUser?.avatar">{{ avatarText }}</span>
               </span>
@@ -308,11 +305,21 @@ const onLogout = () => {
   padding: 0.55rem 0.95rem;
 }
 
+.ghost-action.router-link-active {
+  color: var(--melodify-strong);
+  background: rgba(99, 102, 241, 0.12);
+  border-radius: 999px;
+}
+
 .primary-action {
   color: #fff;
   padding: 0.62rem 1rem;
   background: #6d5dfc;
   box-shadow: 0 8px 18px rgba(99, 102, 241, 0.14);
+}
+
+.primary-action.router-link-active {
+  box-shadow: 0 10px 26px rgba(99, 102, 241, 0.24);
 }
 
 .user-pill {

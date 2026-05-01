@@ -3,7 +3,6 @@
  * 登录页：表单校验 → authStore.login → 跳转 redirect 或首页。
  */
 import type { FormInstance } from 'element-plus'
-import { ElMessage } from 'element-plus'
 import { reactive, ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import AuthLayout from '@/views/auth/AuthLayout.vue'
@@ -38,7 +37,6 @@ const onSubmit = async () => {
       username: form.username.trim(),
       password: form.password,
     })
-    ElMessage.success('登录成功')
     await router.push(safeInternalPath(route.query.redirect))
   } catch (e) {
     showSubmitError(e, '登录失败')

@@ -2,14 +2,10 @@ import { fileURLToPath, URL } from 'node:url'
 
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
-import vueDevTools from 'vite-plugin-vue-devtools'
 
 /** 本地开发：前端请求 /api/* 转发至 melodify-backend（默认 8080），配合 .env.development 中的 VITE_API_BASE_URL=/api */
 export default defineConfig({
-  plugins: [
-    vue(),
-    vueDevTools(),
-  ],
+  plugins: [vue()],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))

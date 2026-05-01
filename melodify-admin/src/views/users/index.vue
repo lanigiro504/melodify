@@ -190,7 +190,7 @@ onMounted(() => {
     <div class="toolbar">
       <el-button type="primary" :icon="Plus" @click="openCreate">新建用户</el-button>
     </div>
-    <el-table v-loading="loading" :data="rows" border stripe row-key="id">
+    <el-table v-loading="loading" :data="rows" border stripe row-key="id" empty-text="暂无数据">
       <el-table-column prop="id" label="ID" width="72" />
       <el-table-column prop="username" label="用户名" min-width="120" />
       <el-table-column prop="nickname" label="昵称" min-width="100" />

@@ -142,7 +142,7 @@ onMounted(() => void fetchList())
     <div class="toolbar">
       <el-button type="primary" :icon="Plus" @click="openCreate">新建角色</el-button>
     </div>
-    <el-table v-loading="loading" :data="rows" border stripe row-key="id">
+    <el-table v-loading="loading" :data="rows" border stripe row-key="id" empty-text="暂无数据">
       <el-table-column prop="id" label="ID" width="72" />
       <el-table-column prop="roleName" label="名称" min-width="120" />
       <el-table-column prop="roleKey" label="标识" min-width="120">

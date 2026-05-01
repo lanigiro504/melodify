@@ -40,7 +40,7 @@ onMounted(() => loadList())
       <el-input v-model="filters.bizType" class="filt wide" clearable placeholder="业务类型 bizType（如 recharge）" />
       <el-button type="primary" :icon="Histogram" @click="onSearch">查询</el-button>
     </div>
-    <el-table v-loading="loading" :data="rows" border stripe row-key="id" size="small">
+    <el-table v-loading="loading" :data="rows" border stripe row-key="id" size="small" empty-text="暂无数据">
       <el-table-column prop="id" label="ID" width="72" />
       <el-table-column prop="logId" label="流水号" min-width="160" show-overflow-tooltip />
       <el-table-column prop="userId" label="用户" width="88" />

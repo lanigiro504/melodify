@@ -45,6 +45,12 @@ const generatingCount = computed(
   () => rows.value.filter((row) => row.status === MUSIC_TASK_STATUS.GENERATING).length,
 )
 
+const emptyDescription = computed(() =>
+  rows.value.length && statusFilter.value !== 'all'
+    ? '当前筛选下没有符合条件的任务'
+    : '暂无作品，先去创作一首歌吧',
+)
+
 async function fetchList() {
   loading.value = true
   try {
@@ -145,8 +151,11 @@ async function openDetail(task: MusicTask) {
         <span class="toolbar-count">共 {{ total }} 条记录</span>
       </div>
 
-      <el-empty v-if="!visibleRows.length && !loading" description="暂无匹配记录，先去创作一首歌吧">
-        <RouterLink to="/generate" class="empty-link">开始创作</RouterLink>
+      <el-empty v-if="!visibleRows.length && !loading" :description="emptyDescription">
+        <template v-if="rows.length && statusFilter !== 'all'">
+          <el-button type="primary" link @click="statusFilter = 'all'">显示全部状态</el-button>
+        </template>
+        <RouterLink v-else class="empty-link" to="/generate">开始创作</RouterLink>
       </el-empty>
 
       <div v-else class="work-list">

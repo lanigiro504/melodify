@@ -37,7 +37,7 @@ const onSubmit = async () => {
       username: form.username.trim(),
       password: form.password,
     })
-    ElMessage.success('注册成功，请登录')
+    ElMessage.success('注册成功')
     await router.push({ path: '/login', query: route.query })
   } catch (e) {
     showSubmitError(e, '注册失败')

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * 登录 / 注册页外壳：与站内页相同的浅色背景与玻璃卡片，避免整页深色渐变带来的割裂感。
+ * 登录 / 注册页外壳：置于 AppShell 主区内，与全站同色背景及玻璃卡片风格一致。
  * 插槽：eyebrow（可选）、title、subtitle、默认（表单）、footer。
  */
 import { computed, useSlots } from 'vue'

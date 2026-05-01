@@ -20,6 +20,15 @@ const auth = useAdminAuthStore()
 
 const active = computed(() => route.path)
 
+const hdrTitle = computed(() => {
+  const matched = route.matched
+  for (let i = matched.length - 1; i >= 0; i--) {
+    const t = matched[i]?.meta?.title
+    if (typeof t === 'string' && t.trim()) return t.trim()
+  }
+  return '工作台'
+})
+
 const handleLogout = () => {
   auth.logout()
   void router.push('/login')
@@ -81,7 +90,7 @@ const handleLogout = () => {
       <el-header class="header">
         <div class="header-left">
           <el-icon class="hdr-icon"><IconMenu /></el-icon>
-          <span class="hdr-title">工作台</span>
+          <span class="hdr-title">{{ hdrTitle }}</span>
         </div>
         <div class="header-right">
           <span class="who">{{ auth.displayName || '管理员' }}</span>

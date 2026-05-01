@@ -1,10 +1,17 @@
 /** 登录 / 注册：与 AppShell 主内容区一致的浅色语境，卡片对齐全站 melodify-glass-card */
+/** 置于 AppShell 主区内时用 flex 占满并可垂直居中，与首页等同源顶栏 */
+.layout-default .app-main:has(.auth-page) {
+  display: flex;
+  flex-direction: column;
+}
+
 .auth-page {
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0.5rem 0 2.5rem;
-  min-height: min(72vh, 38rem);
+  min-height: 0;
 }
 
 .auth-panel {

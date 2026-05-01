@@ -4,6 +4,7 @@
  */
 import { ElMessage } from 'element-plus'
 import { onMounted, reactive, ref } from 'vue'
+import { RouterLink } from 'vue-router'
 import { pageExploreAssets, type ExploreAssetItem } from '@/api/explore'
 import { usePlayerStore } from '@/stores/player'
 import { unwrapResult } from '@/utils/apiResult'
@@ -68,7 +69,9 @@ onMounted(() => void fetchList())
     </section>
 
     <section v-loading="loading" class="explore-grid">
-      <el-empty v-if="!rows.length && !loading" description="暂无人公开作品，去创作并打开「公开到广场」吧" />
+      <el-empty v-if="!rows.length && !loading" description="暂时没有公开作品">
+        <RouterLink class="explore-empty-cta" to="/generate">前往创作（需登录）</RouterLink>
+      </el-empty>
 
       <article v-for="item in rows" :key="item.id" class="explore-card soft-card">
         <div class="explore-card__cover">
@@ -169,6 +172,18 @@ onMounted(() => void fetchList())
   color: var(--melodify-muted);
   font-size: 0.8rem;
   margin-bottom: 0.55rem;
+}
+
+.explore-empty-cta {
+  display: inline-block;
+  margin-top: 0.5rem;
+  font-weight: 800;
+  color: var(--el-color-primary);
+  text-decoration: none;
+}
+
+.explore-empty-cta:hover {
+  text-decoration: underline;
 }
 
 .pager-wrap {

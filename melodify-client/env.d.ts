@@ -12,7 +12,8 @@ interface ImportMeta {
 
 declare module 'vue-router' {
   interface RouteMeta {
-    layout?: 'blank' | 'default'
     requiresAuth?: boolean
+    /** 浏览器标签页标题（不含站点后缀） */
+    title?: string
   }
 }

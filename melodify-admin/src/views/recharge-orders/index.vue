@@ -47,7 +47,7 @@ onMounted(() => loadList())
       </el-select>
       <el-button type="primary" :icon="Sell" @click="onSearch">查询</el-button>
     </div>
-    <el-table v-loading="loading" :data="rows" border stripe row-key="id" size="small">
+    <el-table v-loading="loading" :data="rows" border stripe row-key="id" size="small" empty-text="暂无数据">
       <el-table-column prop="id" label="ID" width="72" />
       <el-table-column prop="orderNo" label="订单号" min-width="180" show-overflow-tooltip />
       <el-table-column prop="userId" label="用户" width="88" />

@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { getStoredToken } from '@/utils/sessionCredentials'
+import { SilentSessionRedirect } from '@/utils/httpSilent'
 
 /**
  * 将 sessionStorage 中的 JWT 附加为 Bearer，与后端 JwtAuthenticationFilter 对齐。
@@ -29,3 +30,32 @@ http.interceptors.request.use((config) => {
   Object.assign(config.headers, auth)
   return config
 })
+
+http.interceptors.response.use(
+  (res) => {
+    const d = res.data
+    const method = String(res.config.method || '').toLowerCase()
+    const url = String(res.config.url || '')
+    const isAuthLoginPost = method === 'post' && url.includes('/client/auth/login')
+    if (
+      !isAuthLoginPost &&
+      d &&
+      typeof d === 'object' &&
+      'code' in d &&
+      typeof (d as { code: unknown }).code === 'number' &&
+      (d as { code: number }).code === 401
+    ) {
+      void import('@/stores/auth').then(({ useAuthStore }) => {
+        useAuthStore().logout()
+      })
+      void import('@/router').then(({ default: r }) => {
+        if (r.currentRoute.value.path !== '/login') {
+          void r.replace({ path: '/login', query: { redirect: r.currentRoute.value.fullPath } })
+        }
+      })
+      return Promise.reject(new SilentSessionRedirect())
+    }
+    return res
+  },
+  (err) => Promise.reject(err),
+)
