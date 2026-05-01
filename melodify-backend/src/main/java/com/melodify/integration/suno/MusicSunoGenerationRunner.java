@@ -15,9 +15,13 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 使用 SunoAPI 官方路径：POST /generate + 轮询 GET /generate/record-info。
@@ -34,6 +38,8 @@ public class MusicSunoGenerationRunner {
 	private static final List<String> SUNO_OPTIONAL_PARAM_KEYS =
 			List.of("negativeTags", "vocalGender", "styleWeight", "weirdnessConstraint",
 					"audioWeight", "personaId", "personaModel");
+	private static final Set<String> SUCCESS_STATUSES =
+			Set.of("SUCCESS", "FIRST_SUCCESS", "COMPLETE", "COMPLETED", "DONE", "FINISHED");
 
 	private final MusicTaskService musicTaskService;
 	private final SunoApiClient sunoApiClient;
@@ -41,6 +47,9 @@ public class MusicSunoGenerationRunner {
 	private final GeneratePointsRefundService refundService;
 	private final SunoApiProperties sunoApiProperties;
 	private final ObjectMapper objectMapper;
+
+	private record CompletedClip(String title, String audioUrl, int durationSec) {
+	}
 
 	@Async("musicTaskExecutor")
 	public void completeAfterSubmit(Long internalMusicTaskPk) {
@@ -56,11 +65,13 @@ public class MusicSunoGenerationRunner {
 		try {
 			JsonNode payload = buildGeneratePayload(task);
 			sunoVendorId = sunoApiClient.postGenerate(payload);
-		} catch (Exception ex) {
+		} catch (SunoApiClient.SunoApiException ex) {
 			log.warn("Suno 提交生成失败 pk={}: {}", internalMusicTaskPk, ex.toString());
-			handleFailure(internalMusicTaskPk, task,
-					ex instanceof SunoApiClient.SunoApiException sa ? sa.getErrorCode() : "SUNO_HTTP",
-					ex.getMessage());
+			handleFailure(internalMusicTaskPk, task, ex.getErrorCode(), ex.getMessage());
+			return;
+		} catch (RuntimeException ex) {
+			log.warn("Suno 提交生成失败 pk={}: {}", internalMusicTaskPk, ex.toString());
+			handleFailure(internalMusicTaskPk, task, "SUNO_HTTP", ex.getMessage());
 			return;
 		}
 
@@ -83,28 +94,21 @@ public class MusicSunoGenerationRunner {
 			JsonNode info;
 			try {
 				info = sunoApiClient.fetchGenerateRecord(sunoVendorId);
-			} catch (Exception ex) {
+			} catch (SunoApiClient.SunoApiException | RuntimeException ex) {
 				log.warn("Suno record-info 失败 pk={}: {}", internalPk, ex.toString());
 				sleepSafe();
 				continue;
 			}
-			String st = info.path("status").asText("").trim().toUpperCase(Locale.ROOT);
-			if ("SUCCESS".equals(st)) {
-				if (tryPersistCompletedClip(internalPk, task, info)) {
-					return;
-				}
-				sleepSafe();
-				continue;
-			}
-			if ("FIRST_SUCCESS".equals(st)) {
-				if (tryPersistCompletedClip(internalPk, task, info)) {
+			String st = resolveStatus(info);
+			if (SUCCESS_STATUSES.contains(st)) {
+				if (tryPersistCompletedClip(internalPk, task, info, false)) {
 					return;
 				}
 				sleepSafe();
 				continue;
 			}
 			if (isGenerationFailedStatus(st)) {
-				String err = info.path("errorMessage").asText("Suno 生成失败");
+				String err = resolveErrorMessage(info, "Suno 生成失败");
 				handleFailure(internalPk, task, "SUNO_FAILED", err.isEmpty() ? st : err);
 				return;
 			}
@@ -114,25 +118,137 @@ public class MusicSunoGenerationRunner {
 	}
 
 	/** @return true 已成功落库并应结束轮询 */
-	private boolean tryPersistCompletedClip(Long internalPk, MusicTask task, JsonNode recordData) {
-		JsonNode clip = resolveFirstClipWithAudio(recordData);
-		if (clip == null) {
+	public boolean trySyncCompletedAsset(Long internalPk) {
+		MusicTask task = musicTaskService.getById(internalPk);
+		if (task == null || !StringUtils.hasText(task.getVendorTaskId())) {
 			return false;
-		}
-		String audioUrl = extractAudioUrl(clip);
-		if (!StringUtils.hasText(audioUrl)) {
-			return false;
-		}
-		String title = clip.hasNonNull("title") ? clip.get("title").asText("") : "";
-		int durationSec = 0;
-		if (clip.has("duration")) {
-			durationSec = (int) Math.round(clip.get("duration").asDouble(0));
 		}
 		try {
+			JsonNode info = sunoApiClient.fetchGenerateRecord(task.getVendorTaskId());
+			String st = resolveStatus(info);
+			if (!SUCCESS_STATUSES.contains(st)) {
+				return false;
+			}
+			return tryPersistCompletedClip(internalPk, task, info, true);
+		} catch (SunoApiClient.SunoApiException | RuntimeException ex) {
+			log.warn("Suno 补偿同步失败 pk={}: {}", internalPk, ex.toString());
+			return false;
+		}
+	}
+
+	/**
+	 * 处理 Suno 官方文档中的 HTTP 回调体（POST application/json）。
+	 * <p>应在独立线程中调用，尽快返回 HTTP 200 给网关。</p>
+	 */
+	public void handleSunoHttpCallback(JsonNode root) {
+		if (root == null || root.isNull()) {
+			return;
+		}
+		JsonNode data = root.get("data");
+		if (data == null || !data.isObject()) {
+			log.warn("Suno 回调缺少 data");
+			return;
+		}
+		String vendorTaskId = firstNonEmpty(textField(data, "task_id"), textField(data, "taskId"));
+		if (!StringUtils.hasText(vendorTaskId)) {
+			log.warn("Suno 回调缺少 task_id");
+			return;
+		}
+		MusicTask task = musicTaskService.lambdaQuery()
+				.eq(MusicTask::getVendorTaskId, vendorTaskId)
+				.one();
+		if (task == null) {
+			log.warn("Suno 回调未匹配本地任务 vendorTaskId={}", vendorTaskId);
+			return;
+		}
+		Long internalPk = task.getId();
+		int code = root.path("code").asInt(-1);
+		String callbackType = textField(data, "callbackType").toLowerCase(Locale.ROOT);
+		String msg = root.path("msg").asText("");
+
+		if (code != 200) {
+			if ("error".equals(callbackType) || code >= 400) {
+				handleFailure(internalPk, task, "SUNO_CALLBACK",
+						StringUtils.hasText(msg) ? msg : ("code=" + code));
+			}
+			return;
+		}
+		if ("error".equals(callbackType)) {
+			handleFailure(internalPk, task, "SUNO_CALLBACK", StringUtils.hasText(msg) ? msg : "error");
+			return;
+		}
+		if ("text".equals(callbackType)) {
+			return;
+		}
+		JsonNode tracks = data.get("data");
+		if (tracks != null && tracks.isArray() && !tracks.isEmpty()) {
+			persistClipFromCallback(internalPk, tracks.get(0));
+			return;
+		}
+		trySyncCompletedAsset(internalPk);
+	}
+
+	private void persistClipFromCallback(Long internalPk, JsonNode clipNode) {
+		MusicTask task = musicTaskService.getById(internalPk);
+		if (task == null) {
+			return;
+		}
+		String audioUrl = extractAudioUrl(clipNode);
+		if (!StringUtils.hasText(audioUrl)) {
+			trySyncCompletedAsset(internalPk);
+			return;
+		}
+		String title = clipNode.path("title").asText("");
+		int durationSec = (int) Math.round(clipNode.path("duration").asDouble(0));
+		Integer st = task.getStatus();
+		try {
+			if (Integer.valueOf(MusicTaskStatuses.SUCCEEDED).equals(st)) {
+				completionFacade.syncSucceededAssetFromSuno(internalPk,
+						StringUtils.hasText(title) ? title : null,
+						audioUrl,
+						durationSec);
+				return;
+			}
+			if (Integer.valueOf(MusicTaskStatuses.GENERATING).equals(st)) {
+				completionFacade.markSucceededAndPersistAsset(internalPk,
+						StringUtils.hasText(title) ? title : null,
+						audioUrl,
+						durationSec);
+			}
+		} catch (Exception ex) {
+			log.error("Suno 回调落库失败 pk={}", internalPk, ex);
+			handleFailure(internalPk, task, "SUNO_CALLBACK_PERSIST", ex.getMessage());
+		}
+	}
+
+	private static String firstNonEmpty(String a, String b) {
+		if (StringUtils.hasText(a)) {
+			return a;
+		}
+		if (StringUtils.hasText(b)) {
+			return b;
+		}
+		return "";
+	}
+
+	private boolean tryPersistCompletedClip(Long internalPk, MusicTask task, JsonNode recordData,
+			boolean allowAlreadySucceeded) {
+		CompletedClip clip = resolveCompletedClip(recordData);
+		if (clip == null) {
+			log.warn("Suno 成功响应未找到音频 URL pk={}，顶层字段={}", internalPk, topLevelFieldNames(recordData));
+			return false;
+		}
+		try {
+			if (allowAlreadySucceeded) {
+				return completionFacade.syncSucceededAssetFromSuno(internalPk,
+						StringUtils.hasText(clip.title()) ? clip.title() : null,
+						clip.audioUrl(),
+						clip.durationSec());
+			}
 			completionFacade.markSucceededAndPersistAsset(internalPk,
-					StringUtils.hasText(title) ? title : null,
-					audioUrl.strip(),
-					durationSec);
+					StringUtils.hasText(clip.title()) ? clip.title() : null,
+					clip.audioUrl(),
+					clip.durationSec());
 		} catch (Exception ex) {
 			log.error("写入成品失败 pk={}", internalPk, ex);
 			handleFailure(internalPk, task, "PERSIST", ex.getMessage());
@@ -140,28 +256,120 @@ public class MusicSunoGenerationRunner {
 		return true;
 	}
 
+	private static CompletedClip resolveCompletedClip(JsonNode recordData) {
+		JsonNode clip = resolveFirstClipWithAudio(recordData);
+		if (clip == null) {
+			return null;
+		}
+		String audioUrl = extractAudioUrl(clip);
+		if (!StringUtils.hasText(audioUrl)) {
+			return null;
+		}
+		String title = clip.hasNonNull("title") ? clip.get("title").asText("") : "";
+		int durationSec = clip.has("duration")
+				? (int) Math.round(clip.get("duration").asDouble(0))
+				: 0;
+		return new CompletedClip(title, audioUrl.strip(), durationSec);
+	}
+
+	private static List<String> topLevelFieldNames(JsonNode node) {
+		if (node == null || !node.isObject()) {
+			return List.of();
+		}
+		List<String> names = new ArrayList<>();
+		node.fieldNames().forEachRemaining(names::add);
+		return names;
+	}
+
 	/**
 	 * 官方 record-info：音轨在 {@code data.response.sunoData[]}，元素字段为 camelCase（audioUrl）。
 	 * 旧版/回调示例可能为 {@code response.data[]} + snake_case（audio_url），此处一并兼容。
 	 */
 	private static JsonNode resolveFirstClipWithAudio(JsonNode recordData) {
-		JsonNode response = recordData.get("response");
-		if (response == null || !response.isObject()) {
-			return null;
+		JsonNode recursive = findClipWithAudio(recordData, 0);
+		if (recursive != null) {
+			return recursive;
 		}
-		JsonNode arr = clipsArray(response);
-		if (arr == null || !arr.isArray() || arr.isEmpty()) {
-			return null;
-		}
-		for (JsonNode clip : arr) {
-			if (clip != null && clip.isObject() && StringUtils.hasText(extractAudioUrl(clip))) {
-				return clip;
+		for (JsonNode candidate : responseCandidates(recordData)) {
+			JsonNode directClip = clipIfHasAudio(candidate);
+			if (directClip != null) {
+				return directClip;
+			}
+			JsonNode arr = clipsArray(candidate);
+			if (arr == null || !arr.isArray() || arr.isEmpty()) {
+				continue;
+			}
+			for (JsonNode clip : arr) {
+				if (clipIfHasAudio(clip) != null) {
+					return clip;
+				}
 			}
 		}
 		return null;
 	}
 
+	private static JsonNode findClipWithAudio(JsonNode node, int depth) {
+		if (node == null || depth > 8) {
+			return null;
+		}
+		if (clipIfHasAudio(node) != null) {
+			return node;
+		}
+		if (node.isArray()) {
+			for (JsonNode child : node) {
+				JsonNode found = findClipWithAudio(child, depth + 1);
+				if (found != null) {
+					return found;
+				}
+			}
+			return null;
+		}
+		if (node.isObject()) {
+			var fields = node.fields();
+			while (fields.hasNext()) {
+				JsonNode found = findClipWithAudio(fields.next().getValue(), depth + 1);
+				if (found != null) {
+					return found;
+				}
+			}
+		}
+		return null;
+	}
+
+	private static List<JsonNode> responseCandidates(JsonNode recordData) {
+		List<JsonNode> candidates = new ArrayList<>();
+		addCandidate(candidates, recordData);
+		JsonNode data = objectChild(recordData, "data");
+		JsonNode response = objectChild(recordData, "response");
+		JsonNode nestedResponse = objectChild(data, "response");
+		addCandidate(candidates, response);
+		addCandidate(candidates, data);
+		addCandidate(candidates, nestedResponse);
+		return candidates;
+	}
+
+	private static void addCandidate(List<JsonNode> candidates, JsonNode node) {
+		if (node != null && node.isObject()) {
+			candidates.add(node);
+		}
+	}
+
+	private static JsonNode objectChild(JsonNode node, String fieldName) {
+		if (node == null || !node.isObject()) {
+			return null;
+		}
+		JsonNode child = node.get(fieldName);
+		return child != null && child.isObject() ? child : null;
+	}
+
+	private static JsonNode clipIfHasAudio(JsonNode clip) {
+		return clip != null && clip.isObject() && StringUtils.hasText(extractAudioUrl(clip)) ? clip : null;
+	}
+
 	private static JsonNode clipsArray(JsonNode responseObj) {
+		if (responseObj == null || !responseObj.isObject()) {
+			return null;
+		}
 		JsonNode sunoData = responseObj.get("sunoData");
 		if (sunoData != null && sunoData.isArray() && !sunoData.isEmpty()) {
 			return sunoData;
@@ -169,6 +377,14 @@ public class MusicSunoGenerationRunner {
 		JsonNode legacyData = responseObj.get("data");
 		if (legacyData != null && legacyData.isArray() && !legacyData.isEmpty()) {
 			return legacyData;
+		}
+		JsonNode clips = responseObj.get("clips");
+		if (clips != null && clips.isArray() && !clips.isEmpty()) {
+			return clips;
+		}
+		JsonNode songs = responseObj.get("songs");
+		if (songs != null && songs.isArray() && !songs.isEmpty()) {
+			return songs;
 		}
 		return null;
 	}
@@ -229,12 +445,52 @@ public class MusicSunoGenerationRunner {
 		}
 		return switch (st) {
 			case "FAILED",
+					"FAILURE",
+					"ERROR",
 					"CREATE_TASK_FAILED",
 					"GENERATE_AUDIO_FAILED",
 					"CALLBACK_EXCEPTION",
 					"SENSITIVE_WORD_ERROR" -> true;
 			default -> false;
 		};
+	}
+
+	private static String resolveStatus(JsonNode info) {
+		String status = textField(info, "status");
+		if (!StringUtils.hasText(status)) {
+			status = textField(info, "taskStatus");
+		}
+		if (!StringUtils.hasText(status)) {
+			status = textField(info, "state");
+		}
+		return status.trim().toUpperCase(Locale.ROOT);
+	}
+
+	private static String resolveErrorMessage(JsonNode info, String fallback) {
+		for (String key : List.of("errorMessage", "error_message", "message", "msg")) {
+			String message = textField(info, key);
+			if (StringUtils.hasText(message)) {
+				return message;
+			}
+		}
+		return fallback;
+	}
+
+	private static String textField(JsonNode node, String key) {
+		if (node == null || !node.isObject()) {
+			return "";
+		}
+		JsonNode val = node.get(key);
+		if (val != null && val.isValueNode() && !val.isNull()) {
+			return val.asText("").strip();
+		}
+		for (String childKey : List.of("data", "response")) {
+			String nested = textField(objectChild(node, childKey), key);
+			if (StringUtils.hasText(nested)) {
+				return nested;
+			}
+		}
+		return "";
 	}
 
 	private void handleFailure(Long internalPk, MusicTask task, String code, String message) {
@@ -307,16 +563,32 @@ public class MusicSunoGenerationRunner {
 	}
 
 	private String resolveCallbackUrl(Map<String, Object> p) {
+		String base = null;
 		if (p != null && p.get("callBackUrl") != null) {
 			String fromTask = String.valueOf(p.get("callBackUrl")).strip();
 			if (StringUtils.hasText(fromTask)) {
-				return fromTask;
+				base = fromTask;
 			}
 		}
-		if (StringUtils.hasText(sunoApiProperties.getCallbackUrl())) {
-			return sunoApiProperties.getCallbackUrl().strip();
+		if (!StringUtils.hasText(base) && StringUtils.hasText(sunoApiProperties.getCallbackUrl())) {
+			base = sunoApiProperties.getCallbackUrl().strip();
 		}
-		return "https://example.invalid/melodify-no-http-callback";
+		if (!StringUtils.hasText(base)) {
+			return "https://example.invalid/melodify-no-http-callback";
+		}
+		return appendCallbackToken(base);
+	}
+
+	private String appendCallbackToken(String base) {
+		if (!StringUtils.hasText(sunoApiProperties.getCallbackToken())) {
+			return base;
+		}
+		if (base.contains("example.invalid")) {
+			return base;
+		}
+		String enc = URLEncoder.encode(sunoApiProperties.getCallbackToken(), StandardCharsets.UTF_8);
+		String sep = base.contains("?") ? "&" : "?";
+		return base + sep + "token=" + enc;
 	}
 
 	private static boolean hasNonBlank(Map<String, Object> p, String key) {

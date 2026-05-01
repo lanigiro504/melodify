@@ -14,7 +14,7 @@
   border-radius: var(--melodify-radius-lg);
 }
 
-.auth-card :deep(.el-card__header) {
+.auth-card .el-card__header {
   padding-bottom: 0.5rem;
 }
 

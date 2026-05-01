@@ -14,9 +14,9 @@ const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
-      path: '/',
-      name: 'home',
-      component: () => import('@/views/home/index.vue'),
+      path: '/explore',
+      name: 'explore',
+      component: () => import('@/views/explore/index.vue'),
     },
     {
       path: '/generate',
@@ -29,6 +29,18 @@ const router = createRouter({
       name: 'works',
       meta: { requiresAuth: true },
       component: () => import('@/views/works/index.vue'),
+    },
+    {
+      path: '/works/:id',
+      name: 'work-detail',
+      meta: { requiresAuth: true },
+      component: () => import('@/views/works/detail.vue'),
+    },
+    {
+      path: '/recharge',
+      name: 'recharge',
+      meta: { requiresAuth: true },
+      component: () => import('@/views/recharge/index.vue'),
     },
     {
       path: '/about',

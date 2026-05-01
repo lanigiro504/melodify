@@ -23,7 +23,8 @@ spring:
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true # 开启驼峰命名转换（如 user_id 映射为 userId）
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl # 在控制台打印 SQL 日志，方便调试
+    # 如需排查 SQL，可在 application-local.yml 中临时开启：
+    # log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
   global-config:
     db-config:
       logic-delete-field: is_deleted # 全局逻辑删除字段名
@@ -57,5 +58,12 @@ melodify:
     poll-interval-ms: 15000
     max-wait-ms: 600000
     callback-url: ""
-    # POST /generate 必填 callBackUrl；不配时 Runner 会使用 https://example.invalid/... 占位（仅合规，不靠回调）
+    # 与 callBackUrl 一并使用：自动附加 ?token=；回调请求需带相同 query
+    callback-token: ""
+    recovery-fixed-delay-ms: 120000
     default-model: V4_5
+  # 将 Suno 返回的 http(s) MP3 镜像到本地目录，播放地址变为 /api/media/audio/{assetId}.mp3
+  audio-storage:
+    enabled: false
+    local-dir: data/melodify-audio
+    public-uri-prefix: /api/media/audio

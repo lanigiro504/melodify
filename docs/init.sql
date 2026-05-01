@@ -125,6 +125,82 @@ CREATE TABLE `point_log` (
   CONSTRAINT `fk_point_log_user_id` FOREIGN KEY (`user_id`) REFERENCES `sys_user` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='积分日志表';
 
+-- ----------------------------
+-- 6. 积分商品表 (point_product)
+-- ----------------------------
+CREATE TABLE `point_product` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '商品主键',
+  `product_code` varchar(64) NOT NULL COMMENT '商品编码',
+  `product_name` varchar(80) NOT NULL COMMENT '商品名称',
+  `points` int NOT NULL COMMENT '到账积分',
+  `price_cent` int NOT NULL COMMENT '模拟支付金额（分）',
+  `status` tinyint NOT NULL DEFAULT '1' COMMENT '状态（1上架 0下架）',
+  `sort_order` int NOT NULL DEFAULT '0' COMMENT '排序',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_product_code` (`product_code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='积分商品表';
+
+INSERT INTO `point_product` (`product_code`, `product_name`, `points`, `price_cent`, `sort_order`) VALUES
+('POINTS_100', '100 积分包', 100, 990, 1),
+('POINTS_500', '500 积分包', 500, 3990, 2),
+('POINTS_1200', '1200 积分包', 1200, 8990, 3);
+
+-- ----------------------------
+-- 7. 充值订单表 (recharge_order)
+-- ----------------------------
+CREATE TABLE `recharge_order` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '订单主键',
+  `order_no` varchar(64) NOT NULL COMMENT '订单号',
+  `user_id` bigint NOT NULL COMMENT '用户ID',
+  `product_id` bigint NOT NULL COMMENT '商品ID',
+  `product_name` varchar(80) NOT NULL COMMENT '下单时商品名快照',
+  `points` int NOT NULL COMMENT '到账积分',
+  `amount_cent` int NOT NULL COMMENT '订单金额（分）',
+  `status` tinyint NOT NULL DEFAULT '0' COMMENT '状态（0待支付 1已支付 2已关闭）',
+  `paid_at` datetime DEFAULT NULL COMMENT '支付完成时间',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_order_no` (`order_no`),
+  KEY `idx_user_create_time` (`user_id`, `create_time`),
+  CONSTRAINT `fk_recharge_order_user_id` FOREIGN KEY (`user_id`) REFERENCES `sys_user` (`id`),
+  CONSTRAINT `fk_recharge_order_product_id` FOREIGN KEY (`product_id`) REFERENCES `point_product` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='充值订单表';
+
+-- ----------------------------
+-- 8. 模拟支付通知表 (payment_notify_log)
+-- ----------------------------
+CREATE TABLE `payment_notify_log` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '通知主键',
+  `notify_id` varchar(64) NOT NULL COMMENT '通知编号/nonce',
+  `order_no` varchar(64) NOT NULL COMMENT '订单号',
+  `signature` varchar(128) NOT NULL COMMENT '签名',
+  `payload` json DEFAULT NULL COMMENT '通知原文',
+  `status` tinyint NOT NULL DEFAULT '0' COMMENT '处理状态（0失败 1成功）',
+  `message` varchar(255) DEFAULT '' COMMENT '处理消息',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_notify_id` (`notify_id`),
+  KEY `idx_order_no` (`order_no`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='模拟支付通知日志';
+
+-- ----------------------------
+-- 9. 音乐点赞表 (music_like)
+-- ----------------------------
+CREATE TABLE `music_like` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '点赞主键',
+  `asset_id` bigint NOT NULL COMMENT '音乐资产主键',
+  `user_id` bigint NOT NULL COMMENT '用户ID',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_asset_user` (`asset_id`, `user_id`),
+  KEY `idx_user_id` (`user_id`),
+  CONSTRAINT `fk_music_like_asset_id` FOREIGN KEY (`asset_id`) REFERENCES `music_asset` (`id`),
+  CONSTRAINT `fk_music_like_user_id` FOREIGN KEY (`user_id`) REFERENCES `sys_user` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='音乐点赞表';
+
 -- ---------------------------------------------------------------------------
 -- 以下为「已有库增量」备忘：若在增加 vendor_task_id 字段前已初始化过库，按需执行：
 -- ALTER TABLE `music_task` ADD COLUMN `vendor_task_id` varchar(128) DEFAULT NULL COMMENT '第三方任务号（SunoAPI 等）' AFTER `task_id`;

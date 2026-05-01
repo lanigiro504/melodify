@@ -22,6 +22,7 @@ public class MusicTaskCompletionFacade {
 	private final MusicTaskService musicTaskService;
 	private final MusicAssetService musicAssetService;
 	private final MusicGenerationProperties properties;
+	private final AudioMirrorService audioMirrorService;
 
 	/** 模拟通路：占位音频链接。 */
 	@Transactional(rollbackFor = Exception.class)
@@ -52,27 +53,90 @@ public class MusicTaskCompletionFacade {
 		}
 
 		task = musicTaskService.getById(internalMusicTaskPk);
-		MusicAsset asset = new MusicAsset();
-		asset.setAssetId(BizIds.uuidCompact());
-		asset.setTaskId(internalMusicTaskPk);
-		asset.setUserId(task.getUserId());
-
+		if (task == null) {
+			return;
+		}
 		String finalTitle = StringUtils.hasText(title) ? title : titleHint(task);
 		String finalUrl = StringUtils.hasText(audioUrl)
 				? audioUrl.strip()
 				: properties.getPlaceholderAudioUrl();
+		MusicAsset asset = newAsset(internalMusicTaskPk, task.getUserId(), finalTitle, finalUrl, durationSec);
+		asset.setFileUrl(audioMirrorService.mirrorRemoteToLocalIfEnabled(finalUrl, asset.getAssetId()));
+		musicAssetService.save(asset);
+	}
 
-		asset.setTitle(finalTitle.length() <= 120 ? finalTitle : finalTitle.substring(0, 120) + "…");
-		asset.setFileUrl(finalUrl);
+	/**
+	 * Suno 管理端已有成品时的补偿同步：允许把已成功但仍是占位音频的资产替换为真实 URL。
+	 */
+	@Transactional(rollbackFor = Exception.class)
+	public boolean syncSucceededAssetFromSuno(Long internalMusicTaskPk, String title,
+			String audioUrl,
+			Integer durationSec) {
+		if (!StringUtils.hasText(audioUrl)) {
+			return false;
+		}
+		MusicTask task = musicTaskService.getById(internalMusicTaskPk);
+		if (task == null) {
+			return false;
+		}
+		Integer status = task.getStatus();
+		boolean canSync = Integer.valueOf(MusicTaskStatuses.GENERATING).equals(status)
+				|| Integer.valueOf(MusicTaskStatuses.SUCCEEDED).equals(status);
+		if (!canSync) {
+			return false;
+		}
+		if (Integer.valueOf(MusicTaskStatuses.GENERATING).equals(status)) {
+			musicTaskService.lambdaUpdate()
+					.eq(MusicTask::getId, internalMusicTaskPk)
+					.eq(MusicTask::getStatus, MusicTaskStatuses.GENERATING)
+					.set(MusicTask::getStatus, MusicTaskStatuses.SUCCEEDED)
+					.set(MusicTask::getFinishedAt, LocalDateTime.now())
+					.update();
+			task = musicTaskService.getById(internalMusicTaskPk);
+			if (task == null) {
+				return false;
+			}
+		}
+
+		String finalTitle = StringUtils.hasText(title) ? title : titleHint(task);
+		String finalUrl = audioUrl.strip();
+		int finalDuration = durationSec != null ? Math.max(durationSec, 0) : 0;
+		MusicAsset latest = musicAssetService.lambdaQuery()
+				.eq(MusicAsset::getTaskId, internalMusicTaskPk)
+				.eq(MusicAsset::getUserId, task.getUserId())
+				.orderByDesc(MusicAsset::getCreateTime)
+				.last("LIMIT 1")
+				.one();
+		if (latest != null) {
+			applyAssetPayload(latest, finalTitle, finalUrl, finalDuration);
+			latest.setFileUrl(audioMirrorService.mirrorRemoteToLocalIfEnabled(finalUrl, latest.getAssetId()));
+			return musicAssetService.updateById(latest);
+		}
+
+		MusicAsset created = newAsset(internalMusicTaskPk, task.getUserId(), finalTitle, finalUrl, finalDuration);
+		created.setFileUrl(audioMirrorService.mirrorRemoteToLocalIfEnabled(finalUrl, created.getAssetId()));
+		return musicAssetService.save(created);
+	}
+
+	private MusicAsset newAsset(Long taskPk, Long userId, String title, String fileUrl, Integer durationSec) {
+		MusicAsset asset = new MusicAsset();
+		asset.setAssetId(BizIds.uuidCompact());
+		asset.setTaskId(taskPk);
+		asset.setUserId(userId);
 		asset.setCoverUrl("");
-		asset.setDurationSec(durationSec != null ? Math.max(durationSec, 0) : 0);
-		asset.setFormat("mp3");
 		asset.setBitrateKbps(320);
 		asset.setIsPublic(0);
 		asset.setLicenseType("personal");
-		asset.setStatus(1);
+		applyAssetPayload(asset, title, fileUrl, durationSec != null ? Math.max(durationSec, 0) : 0);
+		return asset;
+	}
 
-		musicAssetService.save(asset);
+	private static void applyAssetPayload(MusicAsset asset, String title, String fileUrl, int durationSec) {
+		asset.setTitle(truncate(title, 120));
+		asset.setFileUrl(fileUrl);
+		asset.setDurationSec(Math.max(durationSec, 0));
+		asset.setFormat("mp3");
+		asset.setStatus(1);
 	}
 
 	@Transactional(rollbackFor = Exception.class)

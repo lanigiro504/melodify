@@ -1,7 +1,8 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import * as authApi from '@/api/auth'
-import type { SysUser, UserLoginBody, UserRegisterBody } from '@/types/api'
+import * as usersApi from '@/api/users'
+import type { SysUser, UserLoginBody, UserProfileBody, UserRegisterBody } from '@/types/api'
 import { unwrapResult } from '@/utils/apiResult'
 import { getStoredToken, setStoredToken } from '@/utils/sessionCredentials'
 
@@ -31,6 +32,11 @@ export const useAuthStore = defineStore('auth', () => {
     const nick = u.nickname?.trim()
     const name = u.username?.trim()
     return nick || name || ''
+  })
+
+  const avatarText = computed(() => {
+    const name = displayName.value || 'M'
+    return name.slice(0, 1).toUpperCase()
   })
 
   /**
@@ -64,6 +70,15 @@ export const useAuthStore = defineStore('auth', () => {
     setStoredToken(token)
   }
 
+  const persistUserSnapshot = (user: SysUser | null) => {
+    currentUser.value = user
+    if (user) {
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(user))
+    } else {
+      sessionStorage.removeItem(STORAGE_KEY)
+    }
+  }
+
   /** 调用登录接口并更新本地用户快照 */
   const login = async (payload: UserLoginBody) => {
     const body = unwrapResult(await authApi.login(payload))
@@ -73,6 +88,17 @@ export const useAuthStore = defineStore('auth', () => {
   /** 仅完成注册请求；成功后由页面跳转登录，此处不写用户信息 */
   const register = async (payload: UserRegisterBody) => {
     unwrapResult(await authApi.register(payload))
+  }
+
+  const refreshMe = async () => {
+    const user = unwrapResult(await usersApi.getMe())
+    persistUserSnapshot(user)
+    return user
+  }
+
+  const updateProfile = async (payload: UserProfileBody) => {
+    unwrapResult(await usersApi.updateMe(payload))
+    return refreshMe()
   }
 
   /** 清除内存与会话存储中的用户信息 */
@@ -87,9 +113,12 @@ export const useAuthStore = defineStore('auth', () => {
     initialized,
     isAuthenticated,
     displayName,
+    avatarText,
     initialize,
     login,
     register,
+    refreshMe,
+    updateProfile,
     logout,
   }
 })

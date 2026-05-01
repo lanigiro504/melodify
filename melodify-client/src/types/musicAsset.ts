@@ -1,4 +1,6 @@
 /** 与 `/api/client/music-assets` JSON 对齐 */
+import type { MusicTask } from './musicTask'
+
 export interface MusicAsset {
   id: number
   assetId: string
@@ -15,4 +17,14 @@ export interface MusicAsset {
   status?: number | null
   createTime?: string | null
   updateTime?: string | null
+}
+
+export interface MusicAssetDetail {
+  asset: MusicAsset
+  task?: MusicTask | null
+  likeCount: number
+  liked: boolean
+  prompt?: string | null
+  params?: Record<string, unknown> | null
+  createTime?: string | null
 }

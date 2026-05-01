@@ -65,6 +65,42 @@ export interface UserRegisterBody {
   password: string
 }
 
+/** PUT /api/client/users/me 请求体 */
+export interface UserProfileBody {
+  nickname?: string
+  avatar?: string
+  email?: string
+  phone?: string
+}
+
+export interface PointProduct {
+  id: number
+  productCode: string
+  productName: string
+  points: number
+  priceCent: number
+  status?: number | null
+  sortOrder?: number | null
+}
+
+export interface RechargeOrder {
+  orderNo: string
+  productName: string
+  points: number
+  amountCent: number
+  status: number
+  paidAt?: string | null
+  createTime?: string | null
+}
+
+export interface SimulatedPayNotify {
+  notifyId: string
+  orderNo: string
+  amountCent: number
+  timestamp: number
+  signature: string
+}
+
 /** 与 MyBatis-Plus `IPage` 序列化一致（Spring 默认驼峰） */
 export interface PageRecords<T> {
   records: T[]
