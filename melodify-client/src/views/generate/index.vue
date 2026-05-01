@@ -247,13 +247,6 @@ const onSubmit = async () => {
   }
 }
 
-const hint =
-  import.meta.env.DEV ?
-    [
-      '后端默认 melodify.music-generation.provider=auto：已配置 Suno api-key（如 application-local.yml）则试听为远端真曲。',
-      '若仍听到 SoundHelix 占位音频，多半是未载入密钥或未重启后端。',
-    ].join('')
-  : ''
 </script>
 
 <template>
@@ -418,8 +411,6 @@ const hint =
             <li>如果失败，系统会自动退回本次生成积分。</li>
           </ol>
         </section>
-
-        <p v-if="hint" class="page-hint">{{ hint }}</p>
       </aside>
     </div>
   </div>
@@ -430,13 +421,20 @@ const hint =
   display: grid;
   grid-template-columns: minmax(0, 1fr) 22rem;
   gap: 1.1rem;
-  align-items: start;
+  align-items: stretch;
 }
 
 .composer-card,
 .status-card,
 .tips-card {
   padding: 1.35rem;
+}
+
+.composer-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
 }
 
 .generate-form {
@@ -506,6 +504,8 @@ const hint =
   display: flex;
   flex-direction: column;
   gap: 1.1rem;
+  height: 100%;
+  min-height: 0;
 }
 
 .status-head {
@@ -598,16 +598,6 @@ const hint =
 
 .tips-card li + li {
   margin-top: 0.55rem;
-}
-
-.page-hint {
-  margin: 0;
-  padding: 0.9rem 1rem;
-  font-size: 0.86rem;
-  border-radius: var(--melodify-radius-md);
-  color: var(--melodify-muted);
-  background: #f8fafc;
-  border: 1px solid rgba(148, 163, 184, 0.16);
 }
 
 @media (max-width: 980px) {

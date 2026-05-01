@@ -1,39 +1,68 @@
-/** 登录 / 注册页共用样式（由 AuthLayout 引入） */
+/** 登录 / 注册：与 AppShell 主内容区一致的浅色语境，卡片对齐全站 melodify-glass-card */
 .auth-page {
-  min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: clamp(1rem, 4vw, 1.75rem);
-  background: var(--melodify-auth-gradient);
+  padding: 0.5rem 0 2.5rem;
+  min-height: min(72vh, 38rem);
 }
 
-.auth-card {
+.auth-panel {
   width: 100%;
-  max-width: 440px;
-  border-radius: var(--melodify-radius-lg);
+  max-width: 28rem;
+  padding: 1.5rem 1.6rem 1.35rem;
+  border-color: rgba(109, 93, 252, 0.12);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96)),
+    radial-gradient(circle at 12% 8%, rgba(109, 93, 252, 0.07), transparent 42%),
+    radial-gradient(circle at 88% 0%, rgba(8, 145, 178, 0.06), transparent 38%);
 }
 
-.auth-card .el-card__header {
-  padding-bottom: 0.5rem;
+.auth-panel__head {
+  margin-bottom: 1.35rem;
 }
 
-.auth-card__header {
+.auth-panel__head .page-title {
+  margin-bottom: 0.45rem;
+}
+
+.auth-panel__lead {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.auth-panel__body .el-form-item__label {
+  font-weight: 700;
+  color: var(--melodify-strong);
+}
+
+.auth-panel__footer {
+  margin-top: 1.35rem;
+  padding-top: 1.1rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.16);
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  align-items: center;
+  gap: 0.65rem;
+  text-align: center;
 }
 
-.auth-card__title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-}
-
-.auth-card__subtitle {
+.auth-panel__switch {
+  margin: 0;
   font-size: 0.875rem;
-  color: var(--el-text-color-secondary);
-  line-height: 1.45;
+  color: var(--melodify-muted);
+  line-height: 1.5;
+}
+
+.auth-panel__home {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--melodify-muted);
+  transition: color 0.15s ease;
+}
+
+.auth-panel__home:hover {
+  color: var(--el-color-primary);
 }
 
 .auth-card__actions {
@@ -44,23 +73,14 @@
   width: 100%;
 }
 
-.auth-card__footer {
-  margin-top: 1rem;
-  margin-bottom: 0;
-  font-size: 0.875rem;
-  color: var(--el-text-color-regular);
-  text-align: center;
-  line-height: 1.5;
-}
-
 .auth-card__link {
   color: var(--el-color-primary);
-  font-weight: 500;
-  margin-left: 0.15rem;
+  font-weight: 700;
+  margin-left: 0.2rem;
 }
 
 .auth-card__link:hover {
-  opacity: 0.88;
+  opacity: 0.9;
 }
 
 .auth-fade-enter-active {
@@ -71,5 +91,5 @@
 
 .auth-fade-enter-from {
   opacity: 0;
-  transform: translateY(10px);
+  transform: translateY(8px);
 }

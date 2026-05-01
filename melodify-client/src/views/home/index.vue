@@ -385,7 +385,6 @@ const goLogin = () => router.push('/login')
 
 .foot-strip__link {
   position: relative;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: 0.28rem;
@@ -394,24 +393,12 @@ const goLogin = () => router.push('/login')
   border-radius: 1.25rem;
   text-decoration: none;
   color: inherit;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.94)),
-    #ffffff;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(255, 255, 255, 0.92);
   transition:
     transform 0.2s ease,
     box-shadow 0.2s ease,
     border-color 0.2s ease;
-}
-
-.foot-strip__link::after {
-  content: '';
-  position: absolute;
-  right: -2rem;
-  top: -2rem;
-  width: 6rem;
-  height: 6rem;
-  border-radius: 999px;
-  background: rgba(109, 93, 252, 0.08);
 }
 
 .foot-strip__link:hover {
@@ -421,21 +408,18 @@ const goLogin = () => router.push('/login')
 }
 
 .foot-strip__icon {
-  position: relative;
-  z-index: 1;
   display: inline-flex;
   width: fit-content;
   padding: 0.22rem 0.5rem;
-  border-radius: 999px;
-  background: #eef2ff;
-  color: #4f46e5;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(248, 250, 252, 0.95);
+  color: #64748b;
   font-size: 0.72rem;
   font-weight: 900;
 }
 
 .foot-strip__k {
-  position: relative;
-  z-index: 1;
   margin-top: auto;
   font-weight: 900;
   font-size: 1.02rem;
@@ -443,8 +427,6 @@ const goLogin = () => router.push('/login')
 }
 
 .foot-strip__v {
-  position: relative;
-  z-index: 1;
   font-size: 0.82rem;
   color: var(--melodify-muted);
   line-height: 1.45;

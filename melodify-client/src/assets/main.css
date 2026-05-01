@@ -11,13 +11,6 @@
   --melodify-card: #ffffff;
   --melodify-card-solid: #ffffff;
   --melodify-page-bg: #ffffff;
-  --melodify-auth-gradient: linear-gradient(
-    145deg,
-    #111827 0%,
-    #20264a 42%,
-    #4c1d95 72%,
-    #0891b2 100%
-  );
   --melodify-radius-md: 14px;
   --melodify-radius-lg: 22px;
   --melodify-shadow-soft: 0 12px 32px rgba(15, 23, 42, 0.06);
@@ -112,6 +105,10 @@ a {
 
 .page-title--lg {
   font-size: clamp(1.8rem, 4vw, 3rem);
+}
+
+.page-title--md {
+  font-size: clamp(1.45rem, 3.2vw, 2.1rem);
 }
 
 .page-title--xl {

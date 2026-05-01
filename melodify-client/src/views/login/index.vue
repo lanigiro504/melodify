@@ -50,7 +50,8 @@ const onSubmit = async () => {
 
 <template>
   <AuthLayout>
-    <template #title>登录 Melodify</template>
+    <template #eyebrow>Account</template>
+    <template #title>登录</template>
     <template #subtitle>继续你的音乐创作之旅</template>
 
     <el-form ref="formRef" :model="form" :rules="rules" label-position="top" size="large">

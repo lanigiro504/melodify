@@ -5,7 +5,7 @@ import { safeInternalPath } from '@/utils/redirect'
 
 /**
  * 路由说明：
- * - meta.layout === 'blank'：全屏页（无 AppShell 顶栏），由 App.vue 识别。
+ * - meta.layout === 'blank'：全屏页（无 AppShell），由 App.vue 识别（可按需启用）。
  * - meta.requiresAuth：需登录；未登录跳转 /login 并带上 redirect（预留，业务路由按需开启）。
  *
  * 页面组件约定：按路由分段建目录，入口为 index.vue（如 views/home、views/about、views/login）。
@@ -55,13 +55,11 @@ const router = createRouter({
     {
       path: '/login',
       name: 'login',
-      meta: { layout: 'blank' },
       component: () => import('@/views/login/index.vue'),
     },
     {
       path: '/register',
       name: 'register',
-      meta: { layout: 'blank' },
       component: () => import('@/views/register/index.vue'),
     },
   ],

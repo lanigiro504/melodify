@@ -49,7 +49,8 @@ const onSubmit = async () => {
 
 <template>
   <AuthLayout>
-    <template #title>注册 Melodify</template>
+    <template #eyebrow>Account</template>
+    <template #title>注册</template>
     <template #subtitle>创建账号，开始生成音乐</template>
 
     <el-form ref="formRef" :model="form" :rules="rules" label-position="top" size="large">

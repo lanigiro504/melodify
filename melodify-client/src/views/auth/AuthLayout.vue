@@ -1,32 +1,44 @@
 <script setup lang="ts">
 /**
- * 登录 / 注册页外壳：渐变背景、卡片容器与入场动画。
- * 插槽：title / subtitle（卡片头）、默认（表单主体）、footer（底部文案与链接）。
+ * 登录 / 注册页外壳：与站内页相同的浅色背景与玻璃卡片，避免整页深色渐变带来的割裂感。
+ * 插槽：eyebrow（可选）、title、subtitle、默认（表单）、footer。
  */
+import { computed, useSlots } from 'vue'
+import { RouterLink } from 'vue-router'
+
 defineOptions({ name: 'AuthLayout' })
+
+const slots = useSlots()
+const hasEyebrow = computed(() => !!slots.eyebrow)
 </script>
 
 <template>
   <div class="auth-page">
     <transition name="auth-fade" appear>
-      <el-card class="auth-card" shadow="always">
-        <template #header>
-          <div class="auth-card__header">
-            <span class="auth-card__title">
-              <slot name="title" />
-            </span>
-            <span class="auth-card__subtitle">
-              <slot name="subtitle" />
-            </span>
-          </div>
-        </template>
+      <div class="auth-panel melodify-glass-card">
+        <header class="auth-panel__head">
+          <p v-if="hasEyebrow" class="page-eyebrow">
+            <slot name="eyebrow" />
+          </p>
+          <h1 class="page-title page-title--md">
+            <slot name="title" />
+          </h1>
+          <p class="page-desc auth-panel__lead">
+            <slot name="subtitle" />
+          </p>
+        </header>
 
-        <slot />
+        <div class="auth-panel__body">
+          <slot />
+        </div>
 
-        <p class="auth-card__footer">
-          <slot name="footer" />
-        </p>
-      </el-card>
+        <footer class="auth-panel__footer">
+          <p class="auth-panel__switch">
+            <slot name="footer" />
+          </p>
+          <RouterLink class="auth-panel__home" to="/">返回首页</RouterLink>
+        </footer>
+      </div>
     </transition>
   </div>
 </template>
