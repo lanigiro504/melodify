@@ -25,6 +25,68 @@ const task = computed(() => detail.value?.task)
 const title = computed(() => asset.value?.title || task.value?.prompt || '未命名作品')
 const params = computed<Record<string, unknown>>(() => task.value?.params ?? {})
 
+/** 后端存入的独立歌词（优先展示） */
+const lyricsFromParams = computed(() => {
+  const raw = params.value.lyrics
+  return typeof raw === 'string' && raw.trim() ? raw.trim() : ''
+})
+
+const creativeDescription = computed(() => task.value?.prompt?.trim() || '')
+
+/** 展示用歌词块：独立 lyrics 优先；从 prompt 推断时若与创作描述相同则不再重复展示 */
+const lyricsBlockText = computed(() => {
+  if (lyricsFromParams.value) return lyricsFromParams.value
+  const inferred = extractTrackLyrics(task.value?.prompt, task.value?.params ?? null) || ''
+  if (!inferred) return ''
+  if (inferred === creativeDescription.value) return ''
+  return inferred
+})
+
+const heroSummary = computed(() => {
+  const bits: string[] = []
+  if (task.value?.modelCode) bits.push(String(task.value.modelCode))
+  const st = params.value.style
+  if (typeof st === 'string' && st.trim()) bits.push(st.trim())
+  const pt = params.value.title
+  if (typeof pt === 'string' && pt.trim()) bits.push(pt.trim())
+  return bits.length ? bits.join(' · ') : '作品详情'
+})
+
+const PARAM_LABELS: Record<string, string> = {
+  customMode: '自定义模式',
+  instrumental: '纯器乐',
+  style: '风格',
+  title: '标题',
+  lyrics: '歌词',
+  model: '模型',
+  negativeTags: '负面标签',
+  vocalGender: '人声性别',
+  styleWeight: '风格权重',
+  weirdnessConstraint: '怪异度',
+  audioWeight: '音频权重',
+  personaId: 'Persona',
+  personaModel: 'Persona 模型',
+  callBackUrl: '回调地址',
+}
+
+function formatParamValue(v: unknown): string {
+  if (v === true) return '是'
+  if (v === false) return '否'
+  const s = String(v)
+  return s.length > 120 ? `${s.slice(0, 118)}…` : s
+}
+
+const paramEntries = computed(() => {
+  const p = params.value
+  return Object.keys(p)
+    .filter((k) => k !== 'lyrics')
+    .map((k) => ({
+      key: k,
+      label: PARAM_LABELS[k] ?? k,
+      value: formatParamValue(p[k]),
+    }))
+})
+
 async function fetchDetail() {
   const id = Number(route.params.id)
   if (!Number.isFinite(id)) {
@@ -62,11 +124,13 @@ async function toggleLike() {
 }
 
 async function recreate() {
+  const ly = lyricsFromParams.value
   await router.push({
     path: '/generate',
     query: {
       model: task.value?.modelCode ?? 'V4_5',
       prompt: task.value?.prompt ?? '',
+      ...(ly ? { lyrics: ly } : {}),
       style: String(params.value.style ?? ''),
       title: String(params.value.title ?? ''),
       customMode: String(Boolean(params.value.customMode)),
@@ -95,7 +159,7 @@ function playInGlobalBar() {
   player.playTrack({
     title: title.value,
     fileUrl: asset.value.fileUrl,
-    subtitle: task.value?.prompt ?? undefined,
+    subtitle: heroSummary.value,
     lyrics: extractTrackLyrics(task.value?.prompt, task.value?.params ?? null),
     durationSec: asset.value.durationSec ?? undefined,
   })
@@ -110,7 +174,7 @@ onMounted(() => void fetchDetail())
       <div>
         <p class="page-eyebrow">Work Detail</p>
         <h1 class="page-title page-title--lg">{{ title }}</h1>
-        <p class="page-desc page-desc--wide">{{ task?.prompt || '暂无提示词' }}</p>
+        <p class="page-desc page-desc--wide">{{ heroSummary }}</p>
       </div>
       <div class="detail-actions">
         <RouterLink to="/works" class="ghost-link">返回作品库</RouterLink>
@@ -121,7 +185,18 @@ onMounted(() => void fetchDetail())
       </div>
     </section>
 
-    <section v-if="asset" class="player-card melodify-glass-card">
+    <section v-if="asset && (creativeDescription || lyricsBlockText)" class="copy-stack">
+      <article v-if="creativeDescription" class="soft-card copy-card">
+        <h2 class="copy-card__title">创作描述</h2>
+        <p class="copy-card__body">{{ creativeDescription }}</p>
+      </article>
+      <article v-if="lyricsBlockText" class="soft-card copy-card">
+        <h2 class="copy-card__title">歌词</h2>
+        <pre class="copy-card__pre">{{ lyricsBlockText }}</pre>
+      </article>
+    </section>
+
+    <section v-if="asset" class="work-player-card melodify-glass-card">
       <div class="cover-art">
         <span>{{ (asset.title || 'AI').slice(0, 2) }}</span>
       </div>
@@ -136,8 +211,9 @@ onMounted(() => void fetchDetail())
             inactive-text="仅自己"
             @change="onPublicChange"
           />
-          <el-button type="primary" round plain @click="playInGlobalBar">用底部栏播放</el-button>
+          <el-button type="primary" round plain @click="playInGlobalBar">用底部播放器播放</el-button>
         </div>
+        <p class="player-hint">使用站内播放器可查看歌词同步（若本作品有识别到的歌词）。</p>
         <audio controls preload="none" :src="resolvePlayableUrl(asset.fileUrl)" />
       </div>
     </section>
@@ -160,10 +236,10 @@ onMounted(() => void fetchDetail())
     <section class="melodify-glass-card params-card">
       <h2>生成参数</h2>
       <div class="param-list">
-        <span v-for="(value, key) in params" :key="key">
-          {{ key }}：{{ String(value) }}
+        <span v-for="row in paramEntries" :key="row.key">
+          <strong>{{ row.label }}</strong>：{{ row.value }}
         </span>
-        <span v-if="!Object.keys(params).length">暂无结构化参数</span>
+        <span v-if="!paramEntries.length">暂无结构化参数</span>
       </div>
     </section>
   </div>
@@ -182,11 +258,50 @@ onMounted(() => void fetchDetail())
   font-weight: 800;
 }
 
-.player-card {
+.copy-stack {
+  display: grid;
+  gap: 1rem;
+}
+
+.copy-card {
+  padding: 1.15rem 1.25rem;
+}
+
+.copy-card__title {
+  margin: 0 0 0.65rem;
+  font-size: 0.95rem;
+  font-weight: 900;
+  color: var(--melodify-strong);
+}
+
+.copy-card__body {
+  margin: 0;
+  color: var(--melodify-muted);
+  line-height: 1.75;
+  white-space: pre-wrap;
+}
+
+.copy-card__pre {
+  margin: 0;
+  font-family: inherit;
+  font-size: 0.9rem;
+  line-height: 1.65;
+  color: var(--melodify-strong);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.work-player-card {
   display: grid;
   grid-template-columns: 8rem minmax(0, 1fr);
   gap: 1.25rem;
   padding: 1.25rem;
+}
+
+.player-hint {
+  margin: 0 0 0.5rem;
+  font-size: 0.82rem;
+  color: var(--melodify-muted);
 }
 
 .cover-art {
@@ -195,10 +310,11 @@ onMounted(() => void fetchDetail())
   display: grid;
   place-items: center;
   border-radius: 1.5rem;
-  background: #f5f3ff;
+  background: linear-gradient(145deg, #f5f3ff, #eef2ff);
   color: #6d5dfc;
   font-size: 2rem;
   font-weight: 900;
+  border: 1px solid rgba(99, 102, 241, 0.12);
 }
 
 .player-main h2 {
@@ -260,8 +376,13 @@ onMounted(() => void fetchDetail())
   font-size: 0.9rem;
 }
 
+.param-list span strong {
+  color: var(--melodify-strong);
+  font-weight: 800;
+}
+
 @media (max-width: 720px) {
-  .player-card {
+  .work-player-card {
     grid-template-columns: 1fr;
   }
 

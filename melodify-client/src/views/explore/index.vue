@@ -31,6 +31,13 @@ async function fetchList() {
   }
 }
 
+const exploreSubtitle = (item: ExploreAssetItem) => {
+  const parts: string[] = []
+  if (item.durationSec != null && item.durationSec > 0) parts.push(`${item.durationSec} 秒`)
+  parts.push(`${item.likeCount} 赞`)
+  return parts.join(' · ')
+}
+
 const onPlay = (item: ExploreAssetItem) => {
   if (!item.fileUrl?.trim()) {
     ElMessage.warning('暂无可播放地址')
@@ -39,7 +46,7 @@ const onPlay = (item: ExploreAssetItem) => {
   player.playTrack({
     title: item.title?.trim() || item.prompt?.trim() || '未命名作品',
     fileUrl: item.fileUrl,
-    subtitle: item.prompt?.trim() || undefined,
+    subtitle: exploreSubtitle(item),
     lyrics: extractTrackLyrics(item.prompt, undefined),
     durationSec: item.durationSec ?? undefined,
   })
@@ -62,14 +69,14 @@ onMounted(() => void fetchList())
     <section v-loading="loading" class="explore-grid">
       <el-empty v-if="!rows.length && !loading" description="暂无人公开作品，去创作并打开「公开到广场」吧" />
 
-      <article v-for="item in rows" :key="item.id" class="card soft-card">
-        <div class="cover">
-          <span>{{ (item.title || item.prompt || 'AI').slice(0, 2) }}</span>
+      <article v-for="item in rows" :key="item.id" class="explore-card soft-card">
+        <div class="explore-card__cover">
+          <span class="explore-card__abbr">{{ (item.title || item.prompt || 'AI').slice(0, 2) }}</span>
         </div>
-        <div class="body">
+        <div class="explore-card__body">
           <h2>{{ item.title?.trim() || '未命名' }}</h2>
-          <p class="prompt">{{ item.prompt?.trim() || '—' }}</p>
-          <div class="meta">
+          <p class="explore-card__prompt">{{ item.prompt?.trim() || '—' }}</p>
+          <div class="explore-card__meta">
             <span>{{ item.durationSec ?? 0 }} 秒</span>
             <span>{{ item.likeCount }} 赞</span>
           </div>
@@ -99,39 +106,55 @@ onMounted(() => void fetchList())
 <style scoped>
 .explore-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+  gap: 1.1rem;
 }
 
-.card {
+.explore-card {
   display: grid;
-  grid-template-columns: 4.5rem minmax(0, 1fr);
-  gap: 0.85rem;
-  padding: 1rem;
+  grid-template-columns: 4.75rem minmax(0, 1fr);
+  gap: 1rem;
+  padding: 1.05rem 1.1rem;
+  border-radius: 1.15rem;
+  transition:
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
 }
 
-.cover {
-  width: 4.5rem;
-  height: 4.5rem;
-  border-radius: 1rem;
+.explore-card:hover {
+  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.08);
+  border-color: rgba(99, 102, 241, 0.2);
+}
+
+.explore-card__cover {
+  width: 4.75rem;
+  height: 4.75rem;
+  border-radius: 1.05rem;
   display: grid;
   place-items: center;
-  background: #f5f3ff;
+  background: linear-gradient(145deg, #f5f3ff, #eef2ff);
   color: #6d5dfc;
   font-weight: 900;
+  border: 1px solid rgba(99, 102, 241, 0.12);
 }
 
-.body h2 {
+.explore-card__abbr {
+  font-size: 1.05rem;
+  letter-spacing: -0.02em;
+}
+
+.explore-card__body h2 {
   margin: 0;
-  font-size: 1rem;
+  font-size: 1.02rem;
   font-weight: 900;
   color: var(--melodify-strong);
+  line-height: 1.25;
 }
 
-.prompt {
-  margin: 0.45rem 0;
+.explore-card__prompt {
+  margin: 0.4rem 0;
   color: var(--melodify-muted);
-  font-size: 0.86rem;
+  font-size: 0.84rem;
   line-height: 1.5;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -139,11 +162,11 @@ onMounted(() => void fetchList())
   overflow: hidden;
 }
 
-.meta {
+.explore-card__meta {
   display: flex;
   gap: 0.75rem;
   color: var(--melodify-muted);
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   margin-bottom: 0.55rem;
 }
 

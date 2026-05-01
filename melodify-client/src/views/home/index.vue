@@ -35,6 +35,13 @@ const fetchPreview = async () => {
   }
 }
 
+const previewPlaySubtitle = (item: ExploreAssetItem) => {
+  const parts: string[] = []
+  if (item.durationSec != null && item.durationSec > 0) parts.push(`${item.durationSec} 秒`)
+  parts.push(`${item.likeCount} 赞`)
+  return parts.join(' · ')
+}
+
 const onPlayPreview = (item: ExploreAssetItem) => {
   if (!item.fileUrl?.trim()) {
     ElMessage.warning('暂无可播放地址')
@@ -43,7 +50,7 @@ const onPlayPreview = (item: ExploreAssetItem) => {
   player.playTrack({
     title: item.title?.trim() || item.prompt?.trim() || '未命名作品',
     fileUrl: item.fileUrl,
-    subtitle: item.prompt?.trim() || undefined,
+    subtitle: previewPlaySubtitle(item),
     lyrics: extractTrackLyrics(item.prompt, undefined),
     durationSec: item.durationSec ?? undefined,
   })
