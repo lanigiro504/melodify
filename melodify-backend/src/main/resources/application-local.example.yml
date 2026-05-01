@@ -4,13 +4,14 @@
 # 做法：复制为同目录 application-local.yml（已由 .gitignore 排除）。
 # Spring Boot 会在 application.yml 中通过 spring.config.import=optional:classpath:application-local.yml 自动加载，无需再加 profile。
 #
-# 【或】仅用环境变量：SUNO_API_KEY + MELODIFY_MUSIC_GENERATION_PROVIDER=suno
+# 【或】仅用环境变量 SUNO_API_KEY（此时默认 provider=auto 会自动走 Suno）
 #
 # 创作页只调本平台 /api ，Bearer 只应在后端请求 Suno；不要把密钥写进 melodify-client。
 # =============================================================================
 melodify:
   music-generation:
-    provider: suno
+    # 可与主配置一样省略 provider=auto：只要配置了 api-key / SUNO_API_KEY 即远端真曲
+    # provider: simulated
   suno:
     # 不要用仓库里的占位符提交密钥；可复制为 application-local.yml 后填写或使用环境变量 SUNO_API_KEY
     api-key: "YOUR_SUNO_API_KEY"

@@ -169,10 +169,9 @@ const onSubmit = async () => {
 const hint =
   import.meta.env.DEV ?
     [
-      '默认 provider=simulated；本机可把密钥与同目录 melodify-backend/src/main/resources/application-local.yml（已 .gitignore）',
-      'application.yml 已 optional 导入该文件，无需手写 profile。',
-      '密钥勿写进前端。',
-    ].join(' ')
+      '后端默认 melodify.music-generation.provider=auto：已配置 Suno api-key（如 application-local.yml）则试听为远端真曲。',
+      '若仍听到 SoundHelix 占位音频，多半是未载入密钥或未重启后端。',
+    ].join('')
   : ''
 </script>
 

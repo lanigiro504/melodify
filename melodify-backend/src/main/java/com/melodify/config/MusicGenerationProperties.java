@@ -24,7 +24,11 @@ public class MusicGenerationProperties {
 	private String placeholderAudioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3";
 
 	/**
-	 * 异步执行策略：{@code simulated} 本地睡眠占位；{@code suno} 调用 SunoAPI（需配置 melodify.suno.api-key）。
+	 * <ul>
+	 * <li>{@code auto}（默认）：已配置 {@code melodify.suno.api-key} 则走 SunoAPI，否则走本地占位。</li>
+	 * <li>{@code suno}：强制远端；未配置密钥时回退占位并打 WARN。</li>
+	 * <li>{@code simulated}：仅用占位试听，不配密钥也可用。</li>
+	 * </ul>
 	 */
-	private String provider = "simulated";
+	private String provider = "auto";
 }

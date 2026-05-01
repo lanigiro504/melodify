@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * 根据配置在「本地模拟」与「SunoAPI 网关（api.sunoapi.org）」之间二选一；
+ * {@code provider=auto} 时仅在已配置 api-key 时走远端；
  * {@code provider=suno} 但未配置密钥时回退占位并输出 WARN，避免误判为已成功调远端。
  */
 @Slf4j
@@ -21,26 +22,40 @@ public class MusicGenerationAsyncCoordinator {
 	private final MusicSunoGenerationRunner sunoGenerationRunner;
 
 	public void dispatchAfterSubmit(Long internalMusicTaskPk) {
-		boolean wantsSuno = "suno".equalsIgnoreCase(
-				musicGenerationProperties.getProvider() == null
-						? ""
-						: musicGenerationProperties.getProvider().trim());
 		boolean keyOk = sunoApiClient.isConfigured();
-		if (wantsSuno && keyOk) {
-			log.info("musicTask pk={} 走 SunoAPI（api.sunoapi.org）；记录一般在网关控制台，不等同官网 App 的创作列表",
+		String rawProv = resolveProviderRaw();
+
+		boolean useSuno = resolveUseSuno(rawProv, keyOk);
+		if (useSuno) {
+			log.info("musicTask pk={} 走 SunoAPI（api.sunoapi.org）；试听 URL 将由远端回填，不再是占位 SoundHelix",
 					internalMusicTaskPk);
 			sunoGenerationRunner.completeAfterSubmit(internalMusicTaskPk);
 			return;
 		}
 
-		if (wantsSuno && !keyOk) {
-			log.warn("musicTask pk={} provider=suno 但未配置 melodify.suno.api-key / SUNO_API_KEY，回退占位模拟音频",
+		if ("suno".equalsIgnoreCase(rawProv) && !keyOk) {
+			log.warn("musicTask pk={} provider=suno 但未配置 melodify.suno.api-key / SUNO_API_KEY，回退占位音频",
+					internalMusicTaskPk);
+		} else if ("simulated".equalsIgnoreCase(rawProv)) {
+			log.warn("musicTask pk={} provider=simulated ，使用占位试听（SoundHelix）",
 					internalMusicTaskPk);
 		} else {
-			log.warn("musicTask pk={} melodify.music-generation.provider={}，使用本地 simulated 占位，不会产生远端 SunoAPI 记录；真生成请设为 suno 并配置密钥",
-					internalMusicTaskPk,
-					musicGenerationProperties.getProvider());
+			log.warn("musicTask pk={} provider=auto 但未检测到 Suno api-key ，使用占位试听；请到 application-local.yml 或 SUNO_API_KEY 配置密钥",
+					internalMusicTaskPk);
 		}
 		simulatedGenerationRunner.completeAfterSubmit(internalMusicTaskPk);
+	}
+
+	/** 显式 simulated 永远不走路由；suno/auto/空未知 在有密钥时都走路由 Suno（suno 无密钥外层已处理）。 */
+	private boolean resolveUseSuno(String rawProv, boolean keyOk) {
+		if ("simulated".equalsIgnoreCase(rawProv)) {
+			return false;
+		}
+		return keyOk;
+	}
+
+	private String resolveProviderRaw() {
+		String p = musicGenerationProperties.getProvider();
+		return p == null ? "" : p.trim();
 	}
 }

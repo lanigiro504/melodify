@@ -178,14 +178,49 @@ public class MusicSunoGenerationRunner {
 			return "";
 		}
 		String[] keys = {"audio_url", "audioUrl", "source_audio_url", "sourceAudioUrl",
-				"stream_audio_url", "streamAudioUrl"};
+				"source_stream_audio_url", "sourceStreamAudioUrl",
+				"stream_audio_url", "streamAudioUrl", "downloadUrl", "download_url"};
 		for (String k : keys) {
 			JsonNode v = clip.get(k);
-			if (v != null && v.isTextual() && StringUtils.hasText(v.asText())) {
-				return v.asText("");
+			if (v != null && v.isValueNode() && !v.isNull()) {
+				String url = v.asText("").strip();
+				if (StringUtils.hasText(url) && looksLikeHttpUrl(url)) {
+					return url;
+				}
+			}
+		}
+		/* 网关字段偶发更名：扫一级字段里名称含 audio/stream/song/track 的 http(s) 串 */
+		var it = clip.fields();
+		while (it.hasNext()) {
+			var e = it.next();
+			JsonNode v = e.getValue();
+			if (v == null || !v.isValueNode() || v.isNull()) {
+				continue;
+			}
+			String name = e.getKey().toLowerCase(Locale.ROOT);
+			if (!fieldNameLikelyAudioUrl(name)) {
+				continue;
+			}
+			String url = v.asText("").strip();
+			if (StringUtils.hasText(url) && looksLikeHttpUrl(url)) {
+				return url;
 			}
 		}
 		return "";
+	}
+
+	private static boolean fieldNameLikelyAudioUrl(String keyLower) {
+		return keyLower.contains("audio")
+				|| keyLower.contains("stream")
+				|| keyLower.contains("song")
+				|| keyLower.contains("track")
+				|| keyLower.contains("media")
+				|| keyLower.contains("playback");
+	}
+
+	private static boolean looksLikeHttpUrl(String url) {
+		String u = url.toLowerCase(Locale.ROOT);
+		return u.startsWith("http://") || u.startsWith("https://");
 	}
 
 	private static boolean isGenerationFailedStatus(String st) {
