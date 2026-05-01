@@ -24,6 +24,7 @@ const onLogout = () => {
       <RouterLink class="brand" to="/">Melodify</RouterLink>
       <nav class="app-nav" aria-label="主导航">
         <RouterLink to="/" class="nav-link">首页</RouterLink>
+        <RouterLink v-if="isAuthenticated" to="/generate" class="nav-link">创作</RouterLink>
         <RouterLink to="/about" class="nav-link">关于</RouterLink>
         <template v-if="isAuthenticated">
           <span class="nav-user">{{ displayName }}</span>
