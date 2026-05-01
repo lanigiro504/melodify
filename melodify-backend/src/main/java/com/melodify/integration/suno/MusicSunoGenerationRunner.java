@@ -21,7 +21,7 @@ import java.util.Map;
 
 /**
  * 使用 SunoAPI 官方路径：POST /generate + 轮询 GET /generate/record-info。
- * <p>与 JS 示例一致：成功时从 {@code data.response.data[0]} 取 {@code audio_url}、标题与时长。</p>
+ * <p>与文档一致：成功时优先从 {@code data.response.sunoData[]}（OpenAPI）；兼容旧版 {@code response.data[]}。</p>
  * <p>请求体对齐 OpenAPI：必选 {@code customMode}、{@code instrumental}、{@code callBackUrl}、{@code model}；
  * 非自定义模式下只传提示词与其它参数清空；回调仅作合规占位时可用配置或内置占位 URI，实际完成态仍可依赖轮询。</p>
  */
@@ -90,12 +90,22 @@ public class MusicSunoGenerationRunner {
 			}
 			String st = info.path("status").asText("").trim().toUpperCase(Locale.ROOT);
 			if ("SUCCESS".equals(st)) {
-				onSuccess(internalPk, task, info);
-				return;
+				if (tryPersistCompletedClip(internalPk, task, info)) {
+					return;
+				}
+				sleepSafe();
+				continue;
 			}
-			if ("FAILED".equals(st)) {
+			if ("FIRST_SUCCESS".equals(st)) {
+				if (tryPersistCompletedClip(internalPk, task, info)) {
+					return;
+				}
+				sleepSafe();
+				continue;
+			}
+			if (isGenerationFailedStatus(st)) {
 				String err = info.path("errorMessage").asText("Suno 生成失败");
-				handleFailure(internalPk, task, "SUNO_FAILED", err);
+				handleFailure(internalPk, task, "SUNO_FAILED", err.isEmpty() ? st : err);
 				return;
 			}
 			sleepSafe();
@@ -103,24 +113,20 @@ public class MusicSunoGenerationRunner {
 		handleFailure(internalPk, task, "SUNO_TIMEOUT", "Suno 生成超时");
 	}
 
-	private void onSuccess(Long internalPk, MusicTask task, JsonNode recordData) {
-		JsonNode response = recordData.get("response");
-		if (response == null || !response.has("data") || !response.get("data").isArray()
-				|| response.get("data").isEmpty()) {
-			handleFailure(internalPk, task, "SUNO_PAYLOAD", "成功响应缺少 response.data");
-			return;
+	/** @return true 已成功落库并应结束轮询 */
+	private boolean tryPersistCompletedClip(Long internalPk, MusicTask task, JsonNode recordData) {
+		JsonNode clip = resolveFirstClipWithAudio(recordData);
+		if (clip == null) {
+			return false;
 		}
-		JsonNode first = response.get("data").get(0);
-		String audioUrl = first.hasNonNull("audio_url") ? first.get("audio_url").asText("")
-				: first.path("audioUrl").asText("");
+		String audioUrl = extractAudioUrl(clip);
 		if (!StringUtils.hasText(audioUrl)) {
-			handleFailure(internalPk, task, "SUNO_AUDIO", "未返回可用的音频 URL");
-			return;
+			return false;
 		}
-		String title = first.hasNonNull("title") ? first.get("title").asText("") : "";
+		String title = clip.hasNonNull("title") ? clip.get("title").asText("") : "";
 		int durationSec = 0;
-		if (first.has("duration")) {
-			durationSec = (int) Math.round(first.get("duration").asDouble(0));
+		if (clip.has("duration")) {
+			durationSec = (int) Math.round(clip.get("duration").asDouble(0));
 		}
 		try {
 			completionFacade.markSucceededAndPersistAsset(internalPk,
@@ -131,6 +137,69 @@ public class MusicSunoGenerationRunner {
 			log.error("写入成品失败 pk={}", internalPk, ex);
 			handleFailure(internalPk, task, "PERSIST", ex.getMessage());
 		}
+		return true;
+	}
+
+	/**
+	 * 官方 record-info：音轨在 {@code data.response.sunoData[]}，元素字段为 camelCase（audioUrl）。
+	 * 旧版/回调示例可能为 {@code response.data[]} + snake_case（audio_url），此处一并兼容。
+	 */
+	private static JsonNode resolveFirstClipWithAudio(JsonNode recordData) {
+		JsonNode response = recordData.get("response");
+		if (response == null || !response.isObject()) {
+			return null;
+		}
+		JsonNode arr = clipsArray(response);
+		if (arr == null || !arr.isArray() || arr.isEmpty()) {
+			return null;
+		}
+		for (JsonNode clip : arr) {
+			if (clip != null && clip.isObject() && StringUtils.hasText(extractAudioUrl(clip))) {
+				return clip;
+			}
+		}
+		return null;
+	}
+
+	private static JsonNode clipsArray(JsonNode responseObj) {
+		JsonNode sunoData = responseObj.get("sunoData");
+		if (sunoData != null && sunoData.isArray() && !sunoData.isEmpty()) {
+			return sunoData;
+		}
+		JsonNode legacyData = responseObj.get("data");
+		if (legacyData != null && legacyData.isArray() && !legacyData.isEmpty()) {
+			return legacyData;
+		}
+		return null;
+	}
+
+	private static String extractAudioUrl(JsonNode clip) {
+		if (clip == null || !clip.isObject()) {
+			return "";
+		}
+		String[] keys = {"audio_url", "audioUrl", "source_audio_url", "sourceAudioUrl",
+				"stream_audio_url", "streamAudioUrl"};
+		for (String k : keys) {
+			JsonNode v = clip.get(k);
+			if (v != null && v.isTextual() && StringUtils.hasText(v.asText())) {
+				return v.asText("");
+			}
+		}
+		return "";
+	}
+
+	private static boolean isGenerationFailedStatus(String st) {
+		if (st.isEmpty()) {
+			return false;
+		}
+		return switch (st) {
+			case "FAILED",
+					"CREATE_TASK_FAILED",
+					"GENERATE_AUDIO_FAILED",
+					"CALLBACK_EXCEPTION",
+					"SENSITIVE_WORD_ERROR" -> true;
+			default -> false;
+		};
 	}
 
 	private void handleFailure(Long internalPk, MusicTask task, String code, String message) {
