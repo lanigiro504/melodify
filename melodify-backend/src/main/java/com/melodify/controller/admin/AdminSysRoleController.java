@@ -1,10 +1,10 @@
 package com.melodify.controller.admin;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.melodify.common.result.Result;
 import com.melodify.entity.SysRole;
 import com.melodify.service.SysRoleService;
+import com.melodify.support.PagingNormalize;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -39,7 +39,7 @@ public class AdminSysRoleController {
 	public Result<IPage<SysRole>> page(
 			@RequestParam(defaultValue = "1") long current,
 			@RequestParam(defaultValue = "10") long size) {
-		return Result.success(sysRoleService.page(new Page<>(current, size)));
+		return Result.success(sysRoleService.page(PagingNormalize.page(current, size)));
 	}
 
 	/**

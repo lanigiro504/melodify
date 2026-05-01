@@ -50,3 +50,78 @@ export interface PageRecords<T> {
   current: number
   pages?: number
 }
+
+export interface MusicTask {
+  id: number
+  taskId: string
+  vendorTaskId?: string | null
+  userId: number
+  modelCode: string
+  prompt?: string | null
+  params?: Record<string, unknown> | null
+  status?: number | null
+  errorCode?: string | null
+  errorMessage?: string | null
+  costPoints?: number | null
+  startedAt?: string | null
+  finishedAt?: string | null
+  createTime?: string | null
+  updateTime?: string | null
+}
+
+export interface MusicAsset {
+  id: number
+  assetId: string
+  taskId: number
+  userId: number
+  title?: string | null
+  fileUrl?: string | null
+  coverUrl?: string | null
+  durationSec?: number | null
+  format?: string | null
+  bitrateKbps?: number | null
+  isPublic?: number | null
+  licenseType?: string | null
+  status?: number | null
+  createTime?: string | null
+  updateTime?: string | null
+}
+
+export interface PointLog {
+  id: number
+  logId: string
+  userId: number
+  changeType?: number | null
+  amount?: number | null
+  balance?: number | null
+  bizType?: string | null
+  bizId?: string | null
+  remark?: string | null
+  createTime?: string | null
+}
+
+export interface RechargeOrder {
+  id: number
+  orderNo: string
+  userId: number
+  productId: number
+  productName?: string | null
+  points?: number | null
+  amountCent?: number | null
+  status?: number | null
+  paidAt?: string | null
+  createTime?: string | null
+  updateTime?: string | null
+}
+
+export interface PointProduct {
+  id: number
+  productCode: string
+  productName: string
+  points?: number | null
+  priceCent?: number | null
+  status?: number | null
+  sortOrder?: number | null
+  createTime?: string | null
+  updateTime?: string | null
+}

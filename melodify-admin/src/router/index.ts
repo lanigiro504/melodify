@@ -31,6 +31,31 @@ const router = createRouter({
           name: 'admin-roles',
           component: () => import('@/views/roles/index.vue'),
         },
+        {
+          path: 'tasks',
+          name: 'admin-tasks',
+          component: () => import('@/views/tasks/index.vue'),
+        },
+        {
+          path: 'assets',
+          name: 'admin-assets',
+          component: () => import('@/views/assets/index.vue'),
+        },
+        {
+          path: 'point-logs',
+          name: 'admin-point-logs',
+          component: () => import('@/views/point-logs/index.vue'),
+        },
+        {
+          path: 'recharge-orders',
+          name: 'admin-recharge-orders',
+          component: () => import('@/views/recharge-orders/index.vue'),
+        },
+        {
+          path: 'point-products',
+          name: 'admin-point-products',
+          component: () => import('@/views/point-products/index.vue'),
+        },
       ],
     },
   ],

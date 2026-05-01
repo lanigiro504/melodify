@@ -1,10 +1,11 @@
 package com.melodify.controller.admin;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.melodify.common.result.Result;
 import com.melodify.entity.SysUser;
 import com.melodify.service.SysUserService;
+import com.melodify.support.PagingNormalize;
+import com.melodify.support.SysUserSecrets;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -39,8 +40,8 @@ public class AdminSysUserController {
 	public Result<IPage<SysUser>> page(
 			@RequestParam(defaultValue = "1") long current,
 			@RequestParam(defaultValue = "10") long size) {
-		IPage<SysUser> pg = sysUserService.page(new Page<>(current, size));
-		pg.getRecords().forEach(u -> u.setPassword(null));
+		IPage<SysUser> pg = sysUserService.page(PagingNormalize.page(current, size));
+		SysUserSecrets.maskPasswordPage(pg);
 		return Result.success(pg);
 	}
 
@@ -50,9 +51,7 @@ public class AdminSysUserController {
 	@GetMapping("/{id}")
 	public Result<SysUser> getById(@PathVariable Long id) {
 		SysUser u = sysUserService.getById(id);
-		if (u != null) {
-			u.setPassword(null);
-		}
+		SysUserSecrets.maskPassword(u);
 		return Result.success(u);
 	}
 

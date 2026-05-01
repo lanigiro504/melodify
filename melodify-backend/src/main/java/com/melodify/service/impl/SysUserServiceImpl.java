@@ -9,15 +9,13 @@ import com.melodify.mapper.SysUserMapper;
 import com.melodify.model.dto.UserLoginDTO;
 import com.melodify.model.dto.UserProfileDTO;
 import com.melodify.model.dto.UserRegisterDTO;
+import com.melodify.security.LegacyPasswordCodec;
 import com.melodify.service.SysUserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.DigestUtils;
 import org.springframework.util.StringUtils;
-
-import java.nio.charset.StandardCharsets;
 
 /**
  * 《系统用户》业务实现（注册登录、本人资料）。
@@ -53,7 +51,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
 
 		SysUser user = new SysUser();
 		user.setUsername(username);
-		user.setPassword(DigestUtils.md5DigestAsHex(rawPassword.getBytes(StandardCharsets.UTF_8)));
+		user.setPassword(LegacyPasswordCodec.md5HexUtf8(rawPassword));
 		user.setRoleId(DEFAULT_ROLE_ID);
 		user.setStatus(DEFAULT_STATUS_NORMAL);
 		// 首登即 0 会导致「单次扣费 generate-cost-points」永远无法通过，故注册赠送可配置额度
@@ -90,7 +88,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
 			throw new BizException(403, "账号已被封禁");
 		}
 
-		String hashedInput = DigestUtils.md5DigestAsHex(rawPassword.getBytes(StandardCharsets.UTF_8));
+		String hashedInput = LegacyPasswordCodec.md5HexUtf8(rawPassword);
 		String stored = user.getPassword();
 		if (stored == null || !stored.equals(hashedInput)) {
 			throw new BizException(401, "用户名或密码错误");
@@ -144,7 +142,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
 		}
 
 		user.setUsername(username);
-		user.setPassword(DigestUtils.md5DigestAsHex(rawPassword.getBytes(StandardCharsets.UTF_8)));
+		user.setPassword(LegacyPasswordCodec.md5HexUtf8(rawPassword));
 		if (user.getNickname() != null) {
 			user.setNickname(normalize(user.getNickname()));
 		}
@@ -230,7 +228,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
 		}
 		String rawPassword = normalize(body.getPassword());
 		if (StringUtils.hasText(rawPassword)) {
-			uw.set(SysUser::getPassword, DigestUtils.md5DigestAsHex(rawPassword.getBytes(StandardCharsets.UTF_8)));
+			uw.set(SysUser::getPassword, LegacyPasswordCodec.md5HexUtf8(rawPassword));
 			any = true;
 		}
 

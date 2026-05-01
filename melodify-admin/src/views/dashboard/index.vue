@@ -2,12 +2,14 @@
 /**
  * 后台首页：导航说明与后续统计卡片占位。
  */
+import { RouterLink } from 'vue-router'
+
 defineOptions({ name: 'AdminDashboard' })
 </script>
 
 <template>
   <div class="page">
-    <el-page-header content="概览" />
+    <el-page-header title="概览" />
     <el-row :gutter="16" class="cards">
       <el-col :xs="24" :sm="12" :md="8">
         <el-card shadow="hover">
@@ -23,8 +25,14 @@ defineOptions({ name: 'AdminDashboard' })
       </el-col>
       <el-col :xs="24" :sm="12" :md="8">
         <el-card shadow="hover">
-          <template #header>后续扩展</template>
-          <p class="muted">可在此接入任务监控、积分订单、内容审核等运营指标。</p>
+          <template #header>快捷入口</template>
+          <div class="quick">
+            <RouterLink to="/tasks">生成任务</RouterLink>
+            <RouterLink to="/assets">成品资产</RouterLink>
+            <RouterLink to="/point-logs">积分流水</RouterLink>
+            <RouterLink to="/recharge-orders">充值订单</RouterLink>
+            <RouterLink to="/point-products">积分商品</RouterLink>
+          </div>
         </el-card>
       </el-col>
     </el-row>
@@ -43,6 +51,19 @@ defineOptions({ name: 'AdminDashboard' })
   font-size: 14px;
   color: var(--el-text-color-secondary);
   line-height: 1.6;
+}
+.quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  font-size: 14px;
+}
+.quick a {
+  color: var(--el-color-primary);
+  text-decoration: none;
+}
+.quick a:hover {
+  text-decoration: underline;
 }
 code {
   font-size: 12px;

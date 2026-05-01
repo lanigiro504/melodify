@@ -1,5 +1,16 @@
 <script setup lang="ts">
-import { Menu as IconMenu, UserFilled, Key, HomeFilled } from '@element-plus/icons-vue'
+import {
+  Coin,
+  Cpu,
+  FolderOpened,
+  Goods,
+  HomeFilled,
+  Key,
+  Menu as IconMenu,
+  Postcard,
+  Sell,
+  UserFilled,
+} from '@element-plus/icons-vue'
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAdminAuthStore } from '@/stores/adminAuth'
@@ -20,7 +31,14 @@ const handleLogout = () => {
   <el-container class="admin-shell">
     <el-aside width="220px" class="aside">
       <div class="brand">Melodify 后台</div>
-      <el-menu :default-active="active" router class="menu" background-color="#1a1a2e" text-color="#cbd5e1">
+      <el-menu
+        :default-active="active"
+        :default-openeds="['ops']"
+        router
+        class="menu"
+        background-color="#1a1a2e"
+        text-color="#cbd5e1"
+      >
         <el-menu-item index="/">
           <el-icon><HomeFilled /></el-icon>
           <span>概览</span>
@@ -33,6 +51,32 @@ const handleLogout = () => {
           <el-icon><Key /></el-icon>
           <span>角色管理</span>
         </el-menu-item>
+        <el-sub-menu index="ops">
+          <template #title>
+            <el-icon><Postcard /></el-icon>
+            <span>业务运营</span>
+          </template>
+          <el-menu-item index="/tasks">
+            <el-icon><Cpu /></el-icon>
+            <span>生成任务</span>
+          </el-menu-item>
+          <el-menu-item index="/assets">
+            <el-icon><FolderOpened /></el-icon>
+            <span>成品资产</span>
+          </el-menu-item>
+          <el-menu-item index="/point-logs">
+            <el-icon><Coin /></el-icon>
+            <span>积分流水</span>
+          </el-menu-item>
+          <el-menu-item index="/recharge-orders">
+            <el-icon><Sell /></el-icon>
+            <span>充值订单</span>
+          </el-menu-item>
+          <el-menu-item index="/point-products">
+            <el-icon><Goods /></el-icon>
+            <span>积分商品</span>
+          </el-menu-item>
+        </el-sub-menu>
       </el-menu>
     </el-aside>
     <el-container>

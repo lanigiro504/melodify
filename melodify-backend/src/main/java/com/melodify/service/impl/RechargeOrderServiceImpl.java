@@ -1,6 +1,9 @@
 package com.melodify.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.melodify.common.exception.BizException;
 import com.melodify.entity.PaymentNotifyLog;
@@ -43,6 +46,19 @@ public class RechargeOrderServiceImpl extends ServiceImpl<RechargeOrderMapper, R
 	private final PaymentNotifyLogService paymentNotifyLogService;
 	private final SysUserService sysUserService;
 	private final PointLogService pointLogService;
+
+	@Override
+	public IPage<RechargeOrder> pageForAdmin(Page<RechargeOrder> page, Long userId, Integer status) {
+		LambdaQueryWrapper<RechargeOrder> q = new LambdaQueryWrapper<>();
+		if (userId != null) {
+			q.eq(RechargeOrder::getUserId, userId);
+		}
+		if (status != null) {
+			q.eq(RechargeOrder::getStatus, status);
+		}
+		q.orderByDesc(RechargeOrder::getCreateTime);
+		return page(page, q);
+	}
 
 	@Override
 	@Transactional(rollbackFor = Exception.class)
