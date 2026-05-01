@@ -2,8 +2,6 @@ package com.melodify.service;
 
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.melodify.constants.MusicTaskStatuses;
-import com.melodify.entity.MusicAsset;
 import com.melodify.entity.MusicTask;
 import com.melodify.entity.PointLog;
 import com.melodify.entity.SysUser;

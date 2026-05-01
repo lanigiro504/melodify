@@ -3,6 +3,10 @@ spring:
   application:
     name: melodify-backend 
 
+  # 可选加载本路径下的 application-local.yml（已由 .gitignore 排除，仅存本机密钥/联调项）
+  config:
+    import: optional:classpath:application-local.yml
+
   # 数据库连接配置
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver

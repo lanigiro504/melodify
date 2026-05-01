@@ -168,8 +168,8 @@ const onSubmit = async () => {
 const hint =
   import.meta.env.DEV ?
     [
-      '注意：后端默认 melodify.music-generation.provider=simulated，只返回占位试听，不会去 Suno。',
-      '真歌须在启动前设 MELODIFY_MUSIC_GENERATION_PROVIDER=suno + SUNO_API_KEY，或使用 application-local.yml + --spring.profiles.active=local（见 melodify-backend 下 application-local.example.yml）。',
+      '默认 provider=simulated；本机可把密钥与同目录 melodify-backend/src/main/resources/application-local.yml（已 .gitignore）',
+      'application.yml 已 optional 导入该文件，无需手写 profile。',
       '密钥勿写进前端。',
     ].join(' ')
   : ''
