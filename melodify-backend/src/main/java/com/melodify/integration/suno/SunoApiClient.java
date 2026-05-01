@@ -5,27 +5,38 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.melodify.config.SunoApiProperties;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
 
 /**
- * 封装 SunoAPI 网关 HTTP：提交生成与查询 record-info。
- * <p>响应形态与官方 JS 示例一致：<code>{ "code": 200, "msg": "", "data": {...} }</code></p>
+ * SunoAPI（api.sunoapi.org）出站调用：避免注入全局 {@link RestClient.Builder} 与其它组件产生 IDE/容器歧义。
  */
 @Component
 @RequiredArgsConstructor
 public class SunoApiClient {
 
-	private final RestClient.Builder restClientBuilder;
 	private final SunoApiProperties sunoApiProperties;
 	private final ObjectMapper objectMapper;
 
+	/** Suno 请求单独设置较长读超时，独立于其它 HTTP 出站组件。 */
+	private final SimpleClientHttpRequestFactory sunoRequestFactory = buildRequestFactory();
+
+	private static SimpleClientHttpRequestFactory buildRequestFactory() {
+		SimpleClientHttpRequestFactory rf = new SimpleClientHttpRequestFactory();
+		rf.setConnectTimeout(30_000);
+		rf.setReadTimeout(120_000);
+		return rf;
+	}
+
 	private RestClient client() {
-		return restClientBuilder
+		return RestClient.builder()
+				.requestFactory(sunoRequestFactory)
 				.baseUrl(trimTrailingSlash(sunoApiProperties.getApiBaseUrl()))
-				.defaultHeader(org.springframework.http.HttpHeaders.AUTHORIZATION, bearer())
+				.defaultHeader(HttpHeaders.AUTHORIZATION, bearer())
 				.build();
 	}
 
@@ -38,9 +49,6 @@ public class SunoApiClient {
 		return StringUtils.hasText(sunoApiProperties.getApiKey());
 	}
 
-	/**
-	 * @return Suno 侧 taskId（非本系统 music_task.task_id）
-	 */
 	public String postGenerate(JsonNode body) throws SunoApiException {
 		if (!isConfigured()) {
 			throw new SunoApiException("SUNO_DISABLED", "未配置 melodify.suno.api-key");
@@ -71,7 +79,6 @@ public class SunoApiClient {
 		return data.get("taskId").asText();
 	}
 
-	/** GET record-info：返回外层 data 节点（含 status、errorMessage、response）。 */
 	public JsonNode fetchGenerateRecord(String sunoTaskId) throws SunoApiException {
 		if (!isConfigured()) {
 			throw new SunoApiException("SUNO_DISABLED", "未配置 melodify.suno.api-key");
@@ -107,7 +114,6 @@ public class SunoApiClient {
 		return url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
 	}
 
-	/** Suno HTTP/协议失败 */
 	@Getter
 	public static final class SunoApiException extends Exception {
 		private final String errorCode;

@@ -53,9 +53,14 @@ public class MusicGenerationServiceImpl implements MusicGenerationService {
 		}
 
 		SysUser afterUser = sysUserService.getById(userId);
+		if (afterUser == null) {
+			throw new BizException(404, "用户不存在");
+		}
+		Integer pts = afterUser.getPoints();
+		int balanceAfter = pts != null ? pts : 0;
 
 		String businessTaskId = BizIds.uuidCompact();
-		recordPointConsumptionIfNeeded(userId, cost, businessTaskId, afterUser.getPoints());
+		recordPointConsumptionIfNeeded(userId, cost, businessTaskId, balanceAfter);
 
 		Map<String, Object> mergedParams = mergedParams(dto);
 		LocalDateTime now = LocalDateTime.now();
