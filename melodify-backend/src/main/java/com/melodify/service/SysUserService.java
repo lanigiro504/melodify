@@ -2,6 +2,7 @@ package com.melodify.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.melodify.entity.SysUser;
+import com.melodify.model.dto.UserProfileDTO;
 import com.melodify.model.dto.UserLoginDTO;
 import com.melodify.model.dto.UserRegisterDTO;
 
@@ -23,4 +24,9 @@ public interface SysUserService extends IService<SysUser> {
 	 * @throws com.melodify.common.exception.BizException 认证失败或账号封禁
 	 */
 	SysUser login(UserLoginDTO dto);
+
+	/**
+	 * 更新本人可写字段（昵称、头像、邮箱、手机）；不传或 null 的字段不修改。
+	 */
+	void updateSelfProfile(Long userId, UserProfileDTO dto);
 }

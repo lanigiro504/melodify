@@ -3,10 +3,13 @@ package com.melodify.controller.client;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.melodify.common.exception.BizException;
 import com.melodify.common.result.Result;
 import com.melodify.entity.PointLog;
+import com.melodify.security.SecurityUtils;
 import com.melodify.service.PointLogService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -16,14 +19,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 用户端：积分变动日志。路径前缀固定为 {@code /api/client/**}。
- * <p>
- * 用于展示用户积分流水（充值、消费、退款等）。积分余额以 {@link com.melodify.entity.SysUser#getPoints()} 为准，
- * 流水表用于审计与对账；实际扣费逻辑应在事务中同时更新余额与插入一条日志。
- * </p>
- * <p>
- * 写入接口一般仅由服务端内部或管理端调用，此处暴露 {@code POST} 便于联调；上线时可收窄为内部服务或消息消费。
- * </p>
+ * C 端积分流水只读分页；单笔详情校验归属。
+ * {@code POST} 保留给管理员或对账脚本，写入应与余额变动同事务（见服务端内部实现）。
  */
 @RestController
 @RequestMapping("/api/client/point-logs")
@@ -32,32 +29,29 @@ public class ClientPointLogController {
 
 	private final PointLogService pointLogService;
 
-	/**
-	 * 分页查询某用户的积分流水，按创建时间倒序。
-	 */
 	@GetMapping("/page")
 	public Result<IPage<PointLog>> page(
-			@RequestParam Long userId,
 			@RequestParam(defaultValue = "1") long current,
 			@RequestParam(defaultValue = "10") long size) {
+		Long userId = SecurityUtils.requireUserId();
 		LambdaQueryWrapper<PointLog> wrapper = new LambdaQueryWrapper<PointLog>()
 				.eq(PointLog::getUserId, userId)
 				.orderByDesc(PointLog::getCreateTime);
 		return Result.success(pointLogService.page(new Page<>(current, size), wrapper));
 	}
 
-	/**
-	 * 按主键查询单条流水。
-	 */
 	@GetMapping("/{id}")
 	public Result<PointLog> getById(@PathVariable Long id) {
-		return Result.success(pointLogService.getById(id));
+		PointLog row = pointLogService.getById(id);
+		if (row == null) {
+			throw new BizException(404, "记录不存在");
+		}
+		SecurityUtils.requireOwnershipOrAdmin(row.getUserId());
+		return Result.success(row);
 	}
 
-	/**
-	 * 新增积分流水（联调/管理用）。生产环境应在与余额更新相同的事务内调用，避免不一致。
-	 */
 	@PostMapping
+	@PreAuthorize("hasRole('ADMIN')")
 	public Result<Boolean> create(@RequestBody PointLog body) {
 		return Result.success(pointLogService.save(body));
 	}

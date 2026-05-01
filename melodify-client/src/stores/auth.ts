@@ -3,20 +3,26 @@ import { defineStore } from 'pinia'
 import * as authApi from '@/api/auth'
 import type { SysUser, UserLoginBody, UserRegisterBody } from '@/types/api'
 import { unwrapResult } from '@/utils/apiResult'
+import { getStoredToken, setStoredToken } from '@/utils/sessionCredentials'
 
-/** sessionStorage 中缓存当前用户 JSON 的键名（不含密码字段） */
+/** sessionStorage 中缓存当前用户 JSON 的键名（不含 password） */
 const STORAGE_KEY = 'melodify:client:user'
 
 /**
- * 用户端认证状态：与后端 /api/client/auth 对齐。
- * 持久化仅存用户信息；后续 JWT/Cookie 在 api/http.ts 扩展。
+ * 用户端认证状态：与后端 /api/client/auth（JWT Bearer）对齐。
  */
 export const useAuthStore = defineStore('auth', () => {
   const currentUser = ref<SysUser | null>(null)
   /** 是否已从 storage 完成首次 hydrate，供路由守卫使用 */
   const initialized = ref(false)
 
-  const isAuthenticated = computed(() => currentUser.value != null)
+  const isAuthenticated = computed(() => {
+    try {
+      return currentUser.value != null && !!getStoredToken()
+    } catch {
+      return false
+    }
+  })
 
   /** 顶栏与首页问候展示的优先级：nickname → username */
   const displayName = computed(() => {
@@ -38,24 +44,30 @@ export const useAuthStore = defineStore('auth', () => {
       if (raw) {
         currentUser.value = JSON.parse(raw) as SysUser
       }
+      if (!getStoredToken()) {
+        currentUser.value = null
+        sessionStorage.removeItem(STORAGE_KEY)
+      }
     } catch {
       sessionStorage.removeItem(STORAGE_KEY)
+      setStoredToken(null)
       currentUser.value = null
     } finally {
       initialized.value = true
     }
   }
 
-  /** 写入内存并持久化到 sessionStorage（刷新后仍可展示登录态） */
-  const persistUser = (user: SysUser) => {
+  /** 写入用户信息与会话令牌 */
+  const persistSession = (user: SysUser, token: string) => {
     currentUser.value = user
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(user))
+    setStoredToken(token)
   }
 
   /** 调用登录接口并更新本地用户快照 */
   const login = async (payload: UserLoginBody) => {
-    const user = unwrapResult(await authApi.login(payload))
-    persistUser(user)
+    const body = unwrapResult(await authApi.login(payload))
+    persistSession(body.user, body.token)
   }
 
   /** 仅完成注册请求；成功后由页面跳转登录，此处不写用户信息 */
@@ -67,6 +79,7 @@ export const useAuthStore = defineStore('auth', () => {
   const logout = () => {
     currentUser.value = null
     sessionStorage.removeItem(STORAGE_KEY)
+    setStoredToken(null)
   }
 
   return {

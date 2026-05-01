@@ -1,10 +1,10 @@
 /**
- * 与用户端 API 请求体、响应体对齐的 TypeScript 类型（字段驼峰与 JSON 一致）。
- * API_SUCCESS_CODE：与后端 Result.CODE_SUCCESS 一致。
+ * 与用户端 API 的请求/响应字段约定（驼峰命名与 melodify-backend JSON 一致）。
+ * `API_SUCCESS_CODE` 等价于服务端 `Result.CODE_SUCCESS`。
  */
 export const API_SUCCESS_CODE = 200 as const
 
-/** 对齐后端 {@link com.melodify.common.result.Result} */
+/** 与 melodify-backend 统一封装结构 `Result<T>`（code/message/data）一致 */
 export interface Result<T> {
   code: number
   message: string
@@ -28,6 +28,29 @@ export interface SysUser {
   lastLoginTime?: string | null
   createTime?: string | null
   updateTime?: string | null
+}
+
+/** 登录成功后 data：token + 用户快照（无 password） */
+export interface LoginResponse {
+  token: string
+  user: SysUser
+}
+
+/**
+ * 提交 AI 生成：扣积分后异步模拟完成；返回值中的 businessTaskId 用于轮询 `by-task-id`。
+ */
+export interface MusicGenerateSubmit {
+  businessTaskId: string
+  initialStatus: number
+  costPoints: number
+}
+
+/** 对应后端 `MusicGenerateRequestDTO`。 */
+export interface MusicGenerateBody {
+  modelCode: string
+  prompt?: string
+  lyrics?: string
+  params?: Record<string, unknown>
 }
 
 /** POST /api/client/auth/login 请求体 */

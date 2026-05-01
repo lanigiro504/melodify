@@ -6,6 +6,7 @@ import com.melodify.common.exception.BizException;
 import com.melodify.entity.SysUser;
 import com.melodify.mapper.SysUserMapper;
 import com.melodify.model.dto.UserLoginDTO;
+import com.melodify.model.dto.UserProfileDTO;
 import com.melodify.model.dto.UserRegisterDTO;
 import com.melodify.service.SysUserService;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -16,6 +17,10 @@ import org.springframework.util.StringUtils;
 
 import java.nio.charset.StandardCharsets;
 
+/**
+ * 《系统用户》业务实现（注册登录、本人资料）。
+ * <p>密码当前为兼容性 MD5，后续可与安全框架 {@code PasswordEncoder} 对齐并增加盐值。</p>
+ */
 @Service
 public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> implements SysUserService {
 
@@ -87,5 +92,32 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
 
 		user.setPassword(null);
 		return user;
+	}
+
+	/**
+	 * 按需更新昵称/头像/联系方式：仅 dto 中非 {@code null} 的字段会写入数据库，便于前端部分更新。
+	 */
+	@Override
+	public void updateSelfProfile(Long userId, UserProfileDTO dto) {
+		if (!lambdaQuery().eq(SysUser::getId, userId).exists()) {
+			throw new BizException(404, "用户不存在");
+		}
+		boolean any = dto.getNickname() != null
+				|| dto.getAvatar() != null
+				|| dto.getEmail() != null
+				|| dto.getPhone() != null;
+		if (!any) {
+			return;
+		}
+		boolean ok = lambdaUpdate()
+				.eq(SysUser::getId, userId)
+				.set(dto.getNickname() != null, SysUser::getNickname, dto.getNickname())
+				.set(dto.getAvatar() != null, SysUser::getAvatar, dto.getAvatar())
+				.set(dto.getEmail() != null, SysUser::getEmail, dto.getEmail())
+				.set(dto.getPhone() != null, SysUser::getPhone, dto.getPhone())
+				.update();
+		if (!ok) {
+			throw new BizException(500, "资料更新失败，请稍后重试");
+		}
 	}
 }

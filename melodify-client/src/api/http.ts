@@ -1,12 +1,12 @@
 import axios from 'axios'
+import { getStoredToken } from '@/utils/sessionCredentials'
 
 /**
- * 凭证注入点（后续任选其一即可对接后端）：
- * - JWT：在此返回 { Authorization: `Bearer ${token}` }
- * - HttpOnly Cookie：在 axios.create 上设置 withCredentials: true，并保持与后端同源或由网关注入 Cookie
+ * 将 sessionStorage 中的 JWT 附加为 Bearer，与后端 JwtAuthenticationFilter 对齐。
  */
 export const getAuthorizationHeader = (): Record<string, string> => {
-  return {}
+  const t = getStoredToken()
+  return t ? { Authorization: `Bearer ${t}` } : {}
 }
 
 /** 开发环境通常为 /api，经 Vite 代理到后端；生产环境由构建变量注入网关前缀 */

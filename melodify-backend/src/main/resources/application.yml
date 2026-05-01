@@ -29,3 +29,15 @@ mybatis-plus:
 # 服务端配置
 server:
   port: 8080
+
+# JWT：生产环境务必用环境变量覆盖 secret，避免仓库泄露
+# music-generation：扣费点数与异步模拟耗时；占位音频仅供联调
+melodify:
+  security:
+    jwt:
+      secret: "dev-melodify-jwt-change-in-production-use-long-random-secret"
+      expiration-hours: 12
+  music-generation:
+    generate-cost-points: 10
+    simulate-delay-ms: 2500
+    placeholder-audio-url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
