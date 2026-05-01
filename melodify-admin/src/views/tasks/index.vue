@@ -43,8 +43,8 @@ onMounted(() => loadList())
 </script>
 
 <template>
-  <div class="page card">
-    <div class="toolbar">
+  <div class="admin-page-board">
+    <div class="admin-toolbar">
       <el-input v-model.number="filters.userId" class="filt" clearable placeholder="用户 ID（可选）" type="number" />
       <el-select v-model="filters.status" class="filt" placeholder="任务状态（可选）" clearable style="width: 160px">
         <el-option v-for="o in statusOptions" :key="o.value" :label="o.label" :value="o.value" />
@@ -77,7 +77,7 @@ onMounted(() => loadList())
       <el-table-column prop="createTime" label="创建时间" min-width="158" />
     </el-table>
     <el-pagination
-      class="pager"
+      class="admin-pager"
       background
       layout="total, sizes, prev, pager, next"
       :total="total"
@@ -102,25 +102,7 @@ onMounted(() => loadList())
 </template>
 
 <style scoped>
-.page {
-  padding: 1rem 1.25rem 1.5rem;
-}
-.card {
-  background: #fff;
-  border-radius: 8px;
-}
-.toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 1rem;
-  align-items: center;
-}
 .filt {
   width: 160px;
-}
-.pager {
-  margin-top: 1rem;
-  justify-content: flex-end;
 }
 </style>

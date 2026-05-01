@@ -36,8 +36,12 @@ const onSubmit = async () => {
 
 <template>
   <div class="login-page">
-    <div class="card">
-      <h1>管理控制台</h1>
+    <div class="admin-login-card">
+      <div class="login-head">
+        <p class="login-eyebrow">Melodify Admin</p>
+        <h1 class="login-title">管理控制台</h1>
+        <p class="login-lead">请使用管理员账号登录</p>
+      </div>
       <el-form @submit.prevent="onSubmit">
         <el-form-item>
           <el-input v-model="form.username" size="large" placeholder="用户名" :prefix-icon="User" autocomplete="username" />
@@ -67,25 +71,44 @@ const onSubmit = async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(145deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  padding: 2rem 1.25rem;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(109, 93, 252, 0.22), transparent 42%),
+    radial-gradient(circle at 92% 6%, rgba(56, 189, 248, 0.12), transparent 38%),
+    linear-gradient(155deg, #12122a 0%, #1a1a32 36%, #14142a 100%);
 }
-.card {
-  width: 100%;
-  max-width: 400px;
-  padding: 2rem 2rem 2.25rem;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
-}
-h1 {
-  margin: 0 0 1.25rem;
-  font-size: 1.375rem;
-  font-weight: 600;
-  color: var(--el-text-color-primary);
+
+.login-head {
   text-align: center;
+  margin-bottom: 1.5rem;
 }
+
+.login-eyebrow {
+  margin: 0 0 0.45rem;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--el-color-primary);
+}
+
+.login-title {
+  margin: 0 0 0.35rem;
+  font-size: 1.45rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--el-text-color-primary);
+}
+
+.login-lead {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--el-text-color-secondary);
+}
+
 .submit {
   width: 100%;
   margin-top: 0.5rem;
+  font-weight: 700;
 }
 </style>

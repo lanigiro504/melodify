@@ -37,18 +37,22 @@ const handleLogout = () => {
 
 <template>
   <el-container class="admin-shell">
-    <el-aside width="220px" class="aside">
+    <el-aside width="232px" class="aside">
       <div class="brand">
-        <span class="brand-name">Melodify</span>
-        <span class="brand-tag">控制台</span>
+        <span class="brand-mark" aria-hidden="true">M</span>
+        <div class="brand-text">
+          <span class="brand-name">Melodify</span>
+          <span class="brand-tag">控制台</span>
+        </div>
       </div>
       <el-menu
         :default-active="active"
         :default-openeds="['ops']"
         router
         class="menu"
-        background-color="#1a1a2e"
-        text-color="#cbd5e1"
+        background-color="transparent"
+        text-color="#b8c0d4"
+        active-text-color="#f1f5f9"
       >
         <el-menu-item index="/users">
           <el-icon><UserFilled /></el-icon>
@@ -87,9 +91,9 @@ const handleLogout = () => {
       </el-menu>
     </el-aside>
     <el-container>
-      <el-header class="header">
+      <el-header class="header" height="56px">
         <div class="header-left">
-          <el-icon class="hdr-icon"><IconMenu /></el-icon>
+          <el-icon class="hdr-icon" aria-hidden="true"><IconMenu /></el-icon>
           <span class="hdr-title">{{ hdrTitle }}</span>
         </div>
         <div class="header-right">
@@ -109,49 +113,100 @@ const handleLogout = () => {
   min-height: 100vh;
 }
 .aside {
-  background: #1a1a2e;
+  background: var(--admin-sidebar-bg, #141428);
   color: #e2e8f0;
+  border-right: 1px solid var(--admin-sidebar-border, rgba(255, 255, 255, 0.06));
+  display: flex;
+  flex-direction: column;
 }
 .brand {
-  padding: 1.125rem 1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 1.2rem 1rem 1.15rem;
+  border-bottom: 1px solid var(--admin-sidebar-border, rgba(255, 255, 255, 0.06));
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.brand-mark {
+  width: 2.35rem;
+  height: 2.35rem;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 0.75rem;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(145deg, var(--admin-accent, #6d5dfc), #5b4cdb);
+  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.35);
+}
+.brand-text {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
 }
 .brand-name {
   font-weight: 700;
-  font-size: 1.125rem;
-  letter-spacing: 0.03em;
+  font-size: 1.05rem;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
 }
 .brand-tag {
-  font-size: 11px;
-  font-weight: 500;
+  font-size: 10px;
+  font-weight: 600;
   color: rgba(148, 163, 184, 0.95);
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 .menu {
+  flex: 1;
   border-right: none;
+  padding: 0.65rem 0.5rem 1rem;
+  background: transparent !important;
 }
+
+.menu :deep(.el-menu-item),
+.menu :deep(.el-sub-menu__title) {
+  border-radius: 10px;
+  margin: 2px 0;
+}
+
+.menu :deep(.el-menu-item:hover),
+.menu :deep(.el-sub-menu__title:hover) {
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+
+.menu :deep(.el-menu-item.is-active) {
+  background: linear-gradient(92deg, rgba(109, 93, 252, 0.42), rgba(109, 93, 252, 0.12)) !important;
+  box-shadow: inset 3px 0 0 0 var(--admin-accent, #6d5dfc);
+  font-weight: 600;
+}
+
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid var(--el-border-color-lighter);
-  background: #fff;
+  padding: 0 clamp(1rem, 3vw, 1.65rem);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: saturate(1.25) blur(14px);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.7) inset;
 }
 .header-left {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.55rem;
 }
 .hdr-icon {
-  font-size: 1.25rem;
+  font-size: 1.35rem;
   color: var(--el-text-color-secondary);
+  opacity: 0.82;
 }
 .hdr-title {
-  font-weight: 600;
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: -0.02em;
+  color: var(--el-text-color-primary);
 }
 .header-right {
   display: flex;
@@ -161,9 +216,12 @@ const handleLogout = () => {
 .who {
   color: var(--el-text-color-secondary);
   font-size: 14px;
+  font-weight: 500;
 }
 .main {
-  background: #f5f7fa;
-  min-height: calc(100vh - 60px);
+  position: relative;
+  background: transparent;
+  min-height: calc(100vh - 56px);
+  padding: 1.15rem clamp(1rem, 2.5vw, 1.5rem) 1.75rem;
 }
 </style>

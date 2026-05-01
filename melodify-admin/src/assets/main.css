@@ -4,11 +4,31 @@
   box-sizing: border-box;
 }
 
+html {
+  color-scheme: light;
+}
+
+/* 与前台 Melodify 主色对齐；须在 element-plus/dist/index.css 之后引入本文件 */
+
+:root {
+  --el-color-primary: #6d5dfc;
+  --el-color-primary-light-3: #9288ff;
+  --el-color-primary-light-5: #b3adff;
+  --el-border-radius-base: 10px;
+
+  --admin-accent: #6d5dfc;
+  --admin-canvas-bg: linear-gradient(180deg, #e8ecf4 0%, #eef1f7 42%, #f3f5f9 100%);
+  --admin-sidebar-bg: #141428;
+  --admin-sidebar-border: rgba(255, 255, 255, 0.06);
+  --admin-surface: #ffffff;
+  --admin-surface-muted: #f8fafc;
+}
+
 html,
 body {
   margin: 0;
   padding: 0;
-  height: 100%;
+  min-height: 100%;
   font-family:
     ui-sans-serif,
     system-ui,
@@ -17,9 +37,59 @@ body {
     Roboto,
     'Helvetica Neue',
     Arial,
+    'Noto Sans SC',
     sans-serif;
+  -webkit-font-smoothing: antialiased;
+  background: var(--admin-canvas-bg);
 }
 
 #app {
   min-height: 100%;
+}
+
+/* 表格页统一的白色工作台面板 */
+.admin-page-board {
+  background: var(--admin-surface);
+  padding: clamp(1.125rem, 2.2vw, 1.4rem);
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 12px 28px rgba(15, 23, 42, 0.05);
+}
+
+.admin-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.625rem;
+  margin-bottom: 1.05rem;
+}
+
+.admin-toolbar--simple {
+  display: block;
+  margin-bottom: 1rem;
+}
+
+.admin-pager {
+  margin-top: 1rem;
+  justify-content: flex-end;
+}
+
+.el-table {
+  --el-table-header-bg-color: var(--admin-surface-muted);
+  --el-fill-color-lighter: rgba(248, 250, 252, 0.85);
+  border-radius: 10px;
+}
+
+.admin-login-card {
+  width: 100%;
+  max-width: 420px;
+  padding: clamp(1.85rem, 4vw, 2.35rem);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.97);
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  box-shadow:
+    0 28px 64px rgba(15, 23, 42, 0.32),
+    0 2px 0 rgba(255, 255, 255, 0.06) inset;
 }

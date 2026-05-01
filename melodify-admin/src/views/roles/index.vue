@@ -138,8 +138,8 @@ onMounted(() => void fetchList())
 </script>
 
 <template>
-  <div class="page">
-    <div class="toolbar">
+  <div class="admin-page-board">
+    <div class="admin-toolbar admin-toolbar--simple">
       <el-button type="primary" :icon="Plus" @click="openCreate">新建角色</el-button>
     </div>
     <el-table v-loading="loading" :data="rows" border stripe row-key="id" empty-text="暂无数据">
@@ -167,7 +167,7 @@ onMounted(() => void fetchList())
       </el-table-column>
     </el-table>
     <el-pagination
-      class="pager"
+      class="admin-pager"
       background
       layout="total, prev, pager, next"
       :total="total"
@@ -208,18 +208,6 @@ onMounted(() => void fetchList())
 </template>
 
 <style scoped>
-.page {
-  background: #fff;
-  padding: 1rem 1.25rem 1.5rem;
-  border-radius: 8px;
-}
-.toolbar {
-  margin-bottom: 1rem;
-}
-.pager {
-  margin-top: 1rem;
-  justify-content: flex-end;
-}
 .rk {
   font-size: 12px;
   padding: 2px 6px;

@@ -60,8 +60,8 @@ onMounted(() => loadList())
 </script>
 
 <template>
-  <div class="page card">
-    <div class="toolbar">
+  <div class="admin-page-board">
+    <div class="admin-toolbar">
       <el-select v-model="filters.status" placeholder="上架状态（可选）" clearable style="width: 160px">
         <el-option v-for="o in statusOptionsFilter" :key="o.value" :label="o.label" :value="o.value" />
       </el-select>
@@ -88,7 +88,7 @@ onMounted(() => loadList())
       </el-table-column>
     </el-table>
     <el-pagination
-      class="pager"
+      class="admin-pager"
       background
       layout="total, sizes, prev, pager, next"
       :total="total"
@@ -141,24 +141,3 @@ onMounted(() => loadList())
     </el-dialog>
   </div>
 </template>
-
-<style scoped>
-.page {
-  padding: 1rem 1.25rem 1.5rem;
-}
-.card {
-  background: #fff;
-  border-radius: 8px;
-}
-.toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 1rem;
-  align-items: center;
-}
-.pager {
-  margin-top: 1rem;
-  justify-content: flex-end;
-}
-</style>

@@ -186,8 +186,8 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="page">
-    <div class="toolbar">
+  <div class="admin-page-board">
+    <div class="admin-toolbar admin-toolbar--simple">
       <el-button type="primary" :icon="Plus" @click="openCreate">新建用户</el-button>
     </div>
     <el-table v-loading="loading" :data="rows" border stripe row-key="id" empty-text="暂无数据">
@@ -216,7 +216,7 @@ onMounted(() => {
       </el-table-column>
     </el-table>
     <el-pagination
-      class="pager"
+      class="admin-pager"
       background
       layout="total, prev, pager, next"
       :total="total"
@@ -269,18 +269,3 @@ onMounted(() => {
     </el-dialog>
   </div>
 </template>
-
-<style scoped>
-.page {
-  background: #fff;
-  padding: 1rem 1.25rem 1.5rem;
-  border-radius: 8px;
-}
-.toolbar {
-  margin-bottom: 1rem;
-}
-.pager {
-  margin-top: 1rem;
-  justify-content: flex-end;
-}
-</style>
