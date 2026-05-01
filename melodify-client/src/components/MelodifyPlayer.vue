@@ -11,6 +11,7 @@ const { current, resolvedSrc, paused } = storeToRefs(player)
 
 const audioRef = ref<HTMLAudioElement | null>(null)
 const lyricsBoxRef = ref<HTMLElement | null>(null)
+const lyricsExpanded = ref(false)
 const currentTime = ref(0)
 const mediaDuration = ref(0)
 const lastResolvedUrl = ref('')
@@ -76,6 +77,10 @@ const syncPlayback = async () => {
   }
 }
 
+watch(current, () => {
+  lyricsExpanded.value = false
+})
+
 watch(
   [current, resolvedSrc, paused],
   async () => {
@@ -99,7 +104,7 @@ watch(
 )
 
 watch(activeLineIndex, async (idx) => {
-  if (idx < 0 || !lyricsBoxRef.value) return
+  if (!lyricsExpanded.value || idx < 0 || !lyricsBoxRef.value) return
   await nextTick()
   const row = lyricsBoxRef.value.querySelector(`[data-line="${idx}"]`)
   row?.scrollIntoView({ block: 'center', behavior: 'smooth' })
@@ -133,7 +138,7 @@ function seekRatio(ratio: number) {
   <div
     v-if="current"
     class="melodify-player"
-    :class="{ 'melodify-player--with-lyrics': lyricLines.length > 0 }"
+    :class="{ 'melodify-player--lyrics-open': lyricLines.length > 0 && lyricsExpanded }"
     role="region"
     aria-label="全局播放器"
   >
@@ -144,7 +149,10 @@ function seekRatio(ratio: number) {
       @timeupdate="onTimeUpdate"
       @loadedmetadata="onLoadedMetadata"
     />
-    <div class="player-shell">
+    <div
+      class="player-shell"
+      :class="{ 'player-shell--expanded': lyricLines.length > 0 && lyricsExpanded }"
+    >
       <div class="player-top">
         <div class="disc" :class="{ 'disc--playing': !paused }">
           <span>{{ (current.title || 'M').slice(0, 1) }}</span>
@@ -155,6 +163,14 @@ function seekRatio(ratio: number) {
           <span class="time">{{ timeLabel }}</span>
         </div>
         <div class="player-actions">
+          <button
+            v-if="lyricLines.length"
+            type="button"
+            class="icon-btn ghost"
+            @click="lyricsExpanded = !lyricsExpanded"
+          >
+            {{ lyricsExpanded ? '收起歌词' : '歌词' }}
+          </button>
           <button type="button" class="icon-btn" @click="player.setPaused(!paused)">
             {{ paused ? '播放' : '暂停' }}
           </button>
@@ -177,7 +193,7 @@ function seekRatio(ratio: number) {
         />
       </div>
 
-      <div v-if="lyricLines.length" class="lyrics-block">
+      <div v-if="lyricLines.length && lyricsExpanded" class="lyrics-block">
         <p class="lyrics-hint">歌词预览 · 无时间轴时按播放进度大致同步</p>
         <div ref="lyricsBoxRef" class="lyrics-scroll">
           <p
@@ -205,7 +221,7 @@ function seekRatio(ratio: number) {
   width: min(34rem, calc(100vw - 1.5rem));
 }
 
-.melodify-player--with-lyrics {
+.melodify-player--lyrics-open {
   width: min(40rem, calc(100vw - 1.5rem));
 }
 
@@ -218,10 +234,13 @@ function seekRatio(ratio: number) {
     0 1px 0 rgba(255, 255, 255, 0.7) inset;
   backdrop-filter: blur(18px);
   padding: 0.8rem;
-  max-height: min(70vh, 23rem);
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
+}
+
+.player-shell--expanded {
+  max-height: min(70vh, 23rem);
 }
 
 .player-top {
