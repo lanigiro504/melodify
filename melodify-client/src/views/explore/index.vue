@@ -7,6 +7,7 @@ import { onMounted, reactive, ref } from 'vue'
 import { pageExploreAssets, type ExploreAssetItem } from '@/api/explore'
 import { usePlayerStore } from '@/stores/player'
 import { unwrapResult } from '@/utils/apiResult'
+import { extractTrackLyrics } from '@/utils/trackLyrics'
 import { showSubmitError } from '@/utils/showSubmitError'
 
 defineOptions({ name: 'ExplorePage' })
@@ -39,6 +40,8 @@ const onPlay = (item: ExploreAssetItem) => {
     title: item.title?.trim() || item.prompt?.trim() || '未命名作品',
     fileUrl: item.fileUrl,
     subtitle: item.prompt?.trim() || undefined,
+    lyrics: extractTrackLyrics(item.prompt, undefined),
+    durationSec: item.durationSec ?? undefined,
   })
 }
 

@@ -8,15 +8,18 @@ import { computed, onUnmounted, reactive, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { getMusicAssetByBusinessTask } from '@/api/musicAssets'
 import { getMusicTaskByBusinessId, submitMusicGenerate } from '@/api/musicTasks'
+import { usePlayerStore } from '@/stores/player'
 import { MUSIC_TASK_STATUS, musicTaskStatusText } from '@/types/musicTask'
 import { unwrapResult } from '@/utils/apiResult'
 import { showSubmitError } from '@/utils/showSubmitError'
+import { extractTrackLyrics } from '@/utils/trackLyrics'
 import { validateFormRef } from '@/utils/validateFormRef'
 
 defineOptions({ name: 'GenerateMusicPage' })
 
 const POLL_MS = 4000
 const route = useRoute()
+const player = usePlayerStore()
 
 const modelOptions = [
   { label: 'V5_5', value: 'V5_5', desc: '最新模型，适合高质量成曲' },
@@ -138,6 +141,13 @@ const pollOnce = async (taskBizId: string): Promise<boolean> => {
       try {
         const asset = unwrapResult(await getMusicAssetByBusinessTask(taskBizId))
         audioUrl.value = asset.fileUrl
+        player.playTrack({
+          title: form.title.trim() || form.prompt.trim().slice(0, 48) || '新作品',
+          fileUrl: asset.fileUrl,
+          subtitle: form.modelCode,
+          lyrics: extractTrackLyrics(form.prompt, null),
+          durationSec: asset.durationSec ?? undefined,
+        })
         ElMessage.success('生成完成，可以试听')
       } catch (e) {
         showSubmitError(e, '已完成但暂无法加载音频，请稍后在作品列表中查看')

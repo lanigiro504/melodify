@@ -5,6 +5,7 @@ import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { getMusicAssetDetail, likeMusicAsset, patchMusicAssetPublic, unlikeMusicAsset } from '@/api/musicAssets'
 import { usePlayerStore } from '@/stores/player'
 import { resolvePlayableUrl } from '@/utils/audioUrl'
+import { extractTrackLyrics } from '@/utils/trackLyrics'
 import type { MusicAssetDetail } from '@/types/musicAsset'
 import { unwrapResult } from '@/utils/apiResult'
 import { showSubmitError } from '@/utils/showSubmitError'
@@ -95,6 +96,8 @@ function playInGlobalBar() {
     title: title.value,
     fileUrl: asset.value.fileUrl,
     subtitle: task.value?.prompt ?? undefined,
+    lyrics: extractTrackLyrics(task.value?.prompt, task.value?.params ?? null),
+    durationSec: asset.value.durationSec ?? undefined,
   })
 }
 
