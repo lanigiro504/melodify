@@ -22,4 +22,9 @@ public class MusicGenerationProperties {
 	 * 可换成自有 CDN 片段或静默音频。
 	 */
 	private String placeholderAudioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3";
+
+	/**
+	 * 异步执行策略：{@code simulated} 本地睡眠占位；{@code suno} 调用 SunoAPI（需配置 melodify.suno.api-key）。
+	 */
+	private String provider = "simulated";
 }

@@ -27,6 +27,6 @@ public class MusicSimulatedGenerationRunner {
 			log.warn("音乐生成模拟线程被中断 taskPk={}", internalMusicTaskPk);
 			return;
 		}
-		musicTaskCompletionFacade.markSucceededAndPersistAsset(internalMusicTaskPk);
+		musicTaskCompletionFacade.markSucceededAndPersistPlaceholderAsset(internalMusicTaskPk);
 	}
 }

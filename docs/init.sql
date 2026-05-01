@@ -56,6 +56,7 @@ CREATE TABLE `sys_user` (
 CREATE TABLE `music_task` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '任务主键',
   `task_id` varchar(64) NOT NULL COMMENT '任务编号（对外展示）',
+  `vendor_task_id` varchar(128) DEFAULT NULL COMMENT '第三方任务号（如 SunoAPI 返回的 taskId，用于 record-info 轮询）',
   `user_id` bigint NOT NULL COMMENT '发起用户ID',
   `model_code` varchar(64) NOT NULL COMMENT '模型标识（如：melodify-v1）',
   `prompt` text COMMENT '用户输入提示词',
@@ -70,6 +71,7 @@ CREATE TABLE `music_task` (
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_task_id` (`task_id`),
+  KEY `idx_vendor_task_id` (`vendor_task_id`),
   KEY `idx_user_status` (`user_id`, `status`),
   KEY `idx_create_time` (`create_time`),
   CONSTRAINT `fk_music_task_user_id` FOREIGN KEY (`user_id`) REFERENCES `sys_user` (`id`)
@@ -122,3 +124,9 @@ CREATE TABLE `point_log` (
   KEY `idx_biz_type_biz_id` (`biz_type`, `biz_id`),
   CONSTRAINT `fk_point_log_user_id` FOREIGN KEY (`user_id`) REFERENCES `sys_user` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='积分日志表';
+
+-- ---------------------------------------------------------------------------
+-- 以下为「已有库增量」备忘：若在增加 vendor_task_id 字段前已初始化过库，按需执行：
+-- ALTER TABLE `music_task` ADD COLUMN `vendor_task_id` varchar(128) DEFAULT NULL COMMENT '第三方任务号（SunoAPI 等）' AFTER `task_id`;
+-- ALTER TABLE `music_task` ADD KEY `idx_vendor_task_id` (`vendor_task_id`);
+-- ---------------------------------------------------------------------------

@@ -8,10 +8,10 @@ import com.melodify.constants.MusicTaskStatuses;
 import com.melodify.entity.MusicTask;
 import com.melodify.entity.PointLog;
 import com.melodify.entity.SysUser;
+import com.melodify.integration.suno.MusicGenerationAsyncCoordinator;
 import com.melodify.model.dto.MusicGenerateRequestDTO;
 import com.melodify.model.vo.MusicGenerateSubmitVO;
 import com.melodify.service.MusicGenerationService;
-import com.melodify.service.MusicSimulatedGenerationRunner;
 import com.melodify.service.MusicTaskService;
 import com.melodify.service.PointLogService;
 import com.melodify.service.SysUserService;
@@ -37,7 +37,7 @@ public class MusicGenerationServiceImpl implements MusicGenerationService {
 	private final SysUserService sysUserService;
 	private final MusicTaskService musicTaskService;
 	private final PointLogService pointLogService;
-	private final MusicSimulatedGenerationRunner musicSimulatedGenerationRunner;
+	private final MusicGenerationAsyncCoordinator musicGenerationAsyncCoordinator;
 	private final MusicGenerationProperties musicGenerationProperties;
 
 	@Override
@@ -79,7 +79,7 @@ public class MusicGenerationServiceImpl implements MusicGenerationService {
 
 		final Long taskPk = task.getId();
 
-		registerAfterCommit(() -> musicSimulatedGenerationRunner.completeAfterSubmit(taskPk));
+		registerAfterCommit(() -> musicGenerationAsyncCoordinator.dispatchAfterSubmit(taskPk));
 
 		return new MusicGenerateSubmitVO(businessTaskId, task.getStatus(), cost);
 	}

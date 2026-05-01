@@ -2,6 +2,8 @@
 export interface MusicTask {
   id: number
   taskId: string
+  /** SunoAPI 返回的远端 taskId，用于 record-info（若有） */
+  vendorTaskId?: string | null
   userId: number
   modelCode: string
   prompt?: string | null

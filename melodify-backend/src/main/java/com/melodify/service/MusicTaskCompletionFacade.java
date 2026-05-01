@@ -13,8 +13,7 @@ import org.springframework.util.StringUtils;
 import java.time.LocalDateTime;
 
 /**
- * 异步 Worker 的事务边界：CAS 更新任务状态 + 写入成品占位；与 {@link MusicSimulatedGenerationRunner} 解耦，
- * 避免同类自调用导致的 {@link Transactional} 失效问题。
+ * 异步 Worker 的事务边界：任务状态 CAS、成品入库；占位与远端 URL 共用一套逻辑。
  */
 @Component
 @RequiredArgsConstructor
@@ -24,8 +23,18 @@ public class MusicTaskCompletionFacade {
 	private final MusicAssetService musicAssetService;
 	private final MusicGenerationProperties properties;
 
+	/** 模拟通路：占位音频链接。 */
 	@Transactional(rollbackFor = Exception.class)
-	public void markSucceededAndPersistAsset(Long internalMusicTaskPk) {
+	public void markSucceededAndPersistPlaceholderAsset(Long internalMusicTaskPk) {
+		markSucceededAndPersistAsset(internalMusicTaskPk, null,
+				properties.getPlaceholderAudioUrl(), null);
+	}
+
+	/** Suno 成功：写入真实远端 URL（及可选时长/标题）。 */
+	@Transactional(rollbackFor = Exception.class)
+	public void markSucceededAndPersistAsset(Long internalMusicTaskPk, String title,
+			String audioUrl,
+			Integer durationSec) {
 		MusicTask task = musicTaskService.getById(internalMusicTaskPk);
 		if (task == null || !Integer.valueOf(MusicTaskStatuses.GENERATING).equals(task.getStatus())) {
 			return;
@@ -43,15 +52,20 @@ public class MusicTaskCompletionFacade {
 		}
 
 		task = musicTaskService.getById(internalMusicTaskPk);
-
 		MusicAsset asset = new MusicAsset();
 		asset.setAssetId(BizIds.uuidCompact());
 		asset.setTaskId(internalMusicTaskPk);
 		asset.setUserId(task.getUserId());
-		asset.setTitle(titleHint(task));
-		asset.setFileUrl(properties.getPlaceholderAudioUrl());
+
+		String finalTitle = StringUtils.hasText(title) ? title : titleHint(task);
+		String finalUrl = StringUtils.hasText(audioUrl)
+				? audioUrl.strip()
+				: properties.getPlaceholderAudioUrl();
+
+		asset.setTitle(finalTitle.length() <= 120 ? finalTitle : finalTitle.substring(0, 120) + "…");
+		asset.setFileUrl(finalUrl);
 		asset.setCoverUrl("");
-		asset.setDurationSec(0);
+		asset.setDurationSec(durationSec != null ? Math.max(durationSec, 0) : 0);
 		asset.setFormat("mp3");
 		asset.setBitrateKbps(320);
 		asset.setIsPublic(0);
@@ -59,6 +73,27 @@ public class MusicTaskCompletionFacade {
 		asset.setStatus(1);
 
 		musicAssetService.save(asset);
+	}
+
+	@Transactional(rollbackFor = Exception.class)
+	public boolean markGenerationFailed(Long internalMusicTaskPk, String errorCode, String errorMessage) {
+		String code = truncate(errorCode, 64);
+		String msg = truncate(errorMessage, 500);
+		return musicTaskService.lambdaUpdate()
+				.eq(MusicTask::getId, internalMusicTaskPk)
+				.eq(MusicTask::getStatus, MusicTaskStatuses.GENERATING)
+				.set(MusicTask::getStatus, MusicTaskStatuses.FAILED)
+				.set(MusicTask::getErrorCode, code != null ? code : "FAILED")
+				.set(MusicTask::getErrorMessage, msg != null ? msg : "")
+				.set(MusicTask::getFinishedAt, LocalDateTime.now())
+				.update();
+	}
+
+	private static String truncate(String s, int max) {
+		if (s == null) {
+			return "";
+		}
+		return s.length() <= max ? s : s.substring(0, max);
 	}
 
 	private static String titleHint(MusicTask t) {

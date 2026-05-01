@@ -41,3 +41,12 @@ melodify:
     generate-cost-points: 10
     simulate-delay-ms: 2500
     placeholder-audio-url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
+    # simulated=仅占位；suno=调 api.sunoapi.org（需配置下方 api-key）
+    provider: simulated
+  suno:
+    api-base-url: https://api.sunoapi.org/api/v1
+    api-key: ${SUNO_API_KEY:}
+    poll-interval-ms: 15000
+    max-wait-ms: 600000
+    callback-url: ""
+    default-model: V4_5

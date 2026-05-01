@@ -23,6 +23,11 @@ public class MusicTask {
 	 */
 	private String taskId;
 
+	/**
+	 * 第三方（如 api.sunoapi.org）返回的任务号，对应列 {@code vendor_task_id}
+	 */
+	private String vendorTaskId;
+
 	private Long userId;
 
 	private String modelCode;
