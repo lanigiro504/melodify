@@ -19,10 +19,17 @@ const rows = ref<ExploreAssetItem[]>([])
 const total = ref(0)
 const pager = reactive({ current: 1, size: 12 })
 
+const EXPLORE_PAGE_SIZE_MAX = 48
+
 async function fetchList() {
   loading.value = true
   try {
-    const page = unwrapResult(await pageExploreAssets(pager.current, pager.size))
+    const page = unwrapResult(
+      await pageExploreAssets(
+        Math.max(1, pager.current),
+        Math.min(EXPLORE_PAGE_SIZE_MAX, Math.max(1, pager.size)),
+      ),
+    )
     rows.value = page.records
     total.value = page.total
   } catch (e) {
