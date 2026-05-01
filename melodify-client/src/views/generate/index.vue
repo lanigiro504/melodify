@@ -47,7 +47,10 @@ const errorDetail = ref('')
 
 const form = reactive({
   modelCode: 'V4_5',
+  /** 简单模式：整段创作描述。自定义人声：可选的补充描述（不写进 Suno prompt）。 */
   prompt: '',
+  /** 仅自定义 + 人声：写入 params.lyrics，并由后端作为 Suno 的 prompt 提交。 */
+  lyrics: '',
   style: '',
   title: '',
   /** 对齐 Suno 文档：自定义模式需提供 style/title；关闭时仅 prompt（建议 ≤500 字） */
@@ -55,8 +58,9 @@ const form = reactive({
   instrumental: false,
 })
 
-/** 文档：非自定义 prompt ≤500；自定义 V4 系最高 3000，其它更高；前端取宽松上限避免误判 */
-const promptMaxLen = computed(() => (form.customMode ? 5000 : 500))
+/** 文档：非自定义 prompt ≤500；自定义下创作描述取宽松上限；歌词单独计量 */
+const promptMaxLen = computed(() => (form.customMode ? 3000 : 500))
+const lyricsMaxLen = 5000
 
 const statusType = computed(() => {
   if (errorDetail.value) return 'danger'
@@ -69,17 +73,32 @@ const applyExample = (text: string) => {
   form.prompt = text
 }
 
-/** 自定义 + 纯器乐时 Suno 可不填 prompt */
 const rules = computed<FormRules>(() => ({
   prompt: [
     {
       validator: (_r, val, cb) => {
-        if (form.customMode && form.instrumental) {
+        if (form.customMode) {
           cb()
           return
         }
         if (!String(val ?? '').trim()) {
-          cb(new Error('请输入提示词'))
+          cb(new Error('请输入创作描述'))
+          return
+        }
+        cb()
+      },
+      trigger: 'blur',
+    },
+  ],
+  lyrics: [
+    {
+      validator: (_r, val, cb) => {
+        if (!form.customMode || form.instrumental) {
+          cb()
+          return
+        }
+        if (!String(val ?? '').trim()) {
+          cb(new Error('请填写精确歌词'))
           return
         }
         cb()
@@ -100,8 +119,8 @@ const validateBusinessRules = (): boolean => {
     ElMessage.warning('自定义模式下请填写成品标题')
     return false
   }
-  if (!form.instrumental && !form.prompt.trim()) {
-    ElMessage.warning('带人声时请将歌词写入提示词（将作为精确歌词使用）')
+  if (!form.instrumental && !form.lyrics.trim()) {
+    ElMessage.warning('带人声时请填写「精确歌词」')
     return false
   }
   return true
@@ -122,6 +141,7 @@ function applyRouteQuery() {
   if (typeof q.prompt === 'string') form.prompt = q.prompt
   if (typeof q.style === 'string') form.style = q.style
   if (typeof q.title === 'string') form.title = q.title
+  if (typeof q.lyrics === 'string') form.lyrics = q.lyrics
   if (q.customMode === 'true') form.customMode = true
   if (q.customMode === 'false') form.customMode = false
   if (q.instrumental === 'true') form.instrumental = true
@@ -142,12 +162,18 @@ const pollOnce = async (taskBizId: string): Promise<boolean> => {
         const asset = unwrapResult(await getMusicAssetByBusinessTask(taskBizId))
         audioUrl.value = asset.fileUrl
         player.playTrack({
-          title: form.title.trim() || form.prompt.trim().slice(0, 48) || '新作品',
+          title:
+            form.title.trim() ||
+            (form.customMode && !form.instrumental ?
+              form.lyrics.trim().slice(0, 48)
+            : form.prompt.trim().slice(0, 48)) ||
+            '新作品',
           fileUrl: asset.fileUrl,
           subtitle: form.modelCode,
           lyrics: extractTrackLyrics(form.prompt, {
             customMode: form.customMode,
             instrumental: form.instrumental,
+            lyrics: form.lyrics,
           }),
           durationSec: asset.durationSec ?? undefined,
         })
@@ -203,11 +229,13 @@ const onSubmit = async () => {
     if (form.title.trim()) params.title = form.title.trim()
   }
 
+  const trimmedLyrics = form.customMode && !form.instrumental ? form.lyrics.trim() : ''
   try {
     const res = unwrapResult(
       await submitMusicGenerate({
         modelCode: form.modelCode.trim(),
         prompt: form.prompt.trim(),
+        ...(trimmedLyrics ? { lyrics: trimmedLyrics } : {}),
         params,
       }),
     )
@@ -279,25 +307,56 @@ const hint =
             </el-form-item>
           </div>
 
-          <el-form-item label="提示词 / 歌词" prop="prompt">
+          <el-form-item v-if="!form.customMode" label="创作描述" prop="prompt">
             <el-input
               v-model="form.prompt"
               type="textarea"
               :rows="8"
               resize="none"
-              :placeholder="
-                form.customMode ?
-                  form.instrumental ?
-                    '纯器乐可不填，也可以描述氛围、乐器与情绪'
-                  : '将作为精确歌词写入 Suno（自定义模式）'
-                : '简单模式：一段话描述你想要的音乐即可（≤500 字）'
-              "
+              placeholder="用一段话描述情绪、风格、场景或乐器，无需写逐行歌词。"
               :maxlength="promptMaxLen"
               show-word-limit
             />
           </el-form-item>
 
-          <div class="prompt-chips">
+          <el-form-item v-else-if="form.instrumental" label="器乐 / 氛围描述" prop="prompt">
+            <el-input
+              v-model="form.prompt"
+              type="textarea"
+              :rows="6"
+              resize="none"
+              placeholder="描述氛围、乐器与情绪（可不填）；若留空则主要依赖标题与风格。"
+              :maxlength="promptMaxLen"
+              show-word-limit
+            />
+          </el-form-item>
+
+          <template v-else>
+            <el-form-item label="创作描述（可选）" prop="prompt">
+              <el-input
+                v-model="form.prompt"
+                type="textarea"
+                :rows="4"
+                resize="none"
+                placeholder="补充场景、情绪或演唱提示（仅保存在任务中，不直接作为 Suno 歌词提交）。"
+                :maxlength="promptMaxLen"
+                show-word-limit
+              />
+            </el-form-item>
+            <el-form-item label="精确歌词" prop="lyrics">
+              <el-input
+                v-model="form.lyrics"
+                type="textarea"
+                :rows="10"
+                resize="none"
+                placeholder="写入可演唱的歌词（多行、结构清晰）；此栏内容将作为 Suno 人声生成的歌词。"
+                :maxlength="lyricsMaxLen"
+                show-word-limit
+              />
+            </el-form-item>
+          </template>
+
+          <div v-if="!form.customMode || form.instrumental" class="prompt-chips">
             <button
               v-for="text in promptExamples"
               :key="text"
@@ -354,7 +413,8 @@ const hint =
           <h2>创作建议</h2>
           <ol>
             <li>先写情绪、风格和场景，再补充乐器与人声。</li>
-            <li>简单模式适合灵感草稿，自定义模式适合明确歌词。</li>
+            <li><strong>简单模式</strong>只有「创作描述」；<strong>自定义 + 人声</strong>请把逐行歌词放在「精确歌词」，与上面的补充描述区分开。</li>
+            <li><strong>自定义 + 纯器乐</strong>只需标题与风格，氛围描述选填。</li>
             <li>如果失败，系统会自动退回本次生成积分。</li>
           </ol>
         </section>

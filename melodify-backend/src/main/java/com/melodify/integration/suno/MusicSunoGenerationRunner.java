@@ -513,7 +513,10 @@ public class MusicSunoGenerationRunner {
 		root.put("customMode", customMode);
 		root.put("instrumental", instrumental);
 
-		if (StringUtils.hasText(task.getPrompt())) {
+		// 自定义人声：Suno 的 prompt 需为可唱歌词；与「创作描述」拆分后歌词在 params.lyrics。
+		if (customMode && !instrumental && hasNonBlank(p, "lyrics")) {
+			root.put("prompt", String.valueOf(p.get("lyrics")).strip());
+		} else if (StringUtils.hasText(task.getPrompt())) {
 			root.put("prompt", task.getPrompt().strip());
 		}
 
