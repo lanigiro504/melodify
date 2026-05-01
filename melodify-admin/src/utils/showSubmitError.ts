@@ -1,8 +1,10 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import { ApiError } from '@/utils/apiResult'
+import { SilentSessionRedirect } from '@/utils/httpSilent'
 
 export const showSubmitError = (error: unknown, fallbackMessage: string): void => {
+  if (error instanceof SilentSessionRedirect) return
   if (error instanceof ApiError) {
     ElMessage.error(error.message)
     return

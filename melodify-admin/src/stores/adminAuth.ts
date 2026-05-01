@@ -11,9 +11,6 @@ import {
   setStoredToken,
 } from '@/utils/sessionCredentials'
 
-/**
- * 管理端会话：与用户端共用 `/api/client/auth/login` 签发 JWT，仅角色键 `admin` 可调 `/api/admin/**`。
- */
 export const useAdminAuthStore = defineStore('adminAuth', () => {
   const currentUser = ref<SysUser | null>(null)
   const initialized = ref(false)
@@ -62,9 +59,6 @@ export const useAdminAuthStore = defineStore('adminAuth', () => {
     clearAdminCredentialStorage()
   }
 
-  /**
-   * 登录并要求具备管理端网关权限。
-   */
   const login = async (username: string, password: string): Promise<void> => {
     const body = unwrapResult(await authApi.login({ username, password }))
     persistSession(body.user, body.token)
@@ -73,7 +67,7 @@ export const useAdminAuthStore = defineStore('adminAuth', () => {
     } catch (e) {
       logout()
       if (e instanceof ApiError && e.code === 403) {
-        throw new ApiError(403, '当前账号不是管理员，无法进入后台')
+        throw new ApiError(403, '当前账号无权访问控制台')
       }
       throw e
     }

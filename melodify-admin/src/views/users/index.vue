@@ -3,8 +3,8 @@
  * sys_user：分页、新建、编辑、删除；新建/修改密码由后端 MD5（与前台登录一致）。
  */
 import { Delete, Edit, Plus } from '@element-plus/icons-vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { computed, onMounted, reactive, ref } from 'vue'
+import { ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
+import { computed, nextTick, onMounted, reactive, ref } from 'vue'
 import * as adminRolesApi from '@/api/adminRoles'
 import * as adminUsersApi from '@/api/adminUsers'
 import type { SysRole, SysUser } from '@/types/api'
@@ -37,6 +37,23 @@ const form = reactive<Partial<SysUser> & { password?: string }>({
   roleId: 2,
   status: USER_STATUS_NORMAL,
 })
+
+const dlgFormRef = ref<FormInstance>()
+const dlgRules = computed<FormRules>(() => ({
+  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
+  password: [
+    {
+      validator: (_rule, val, cb) => {
+        if (!isEdit.value && !String(val ?? '').trim()) {
+          cb(new Error('请输入初始密码'))
+          return
+        }
+        cb()
+      },
+      trigger: 'blur',
+    },
+  ],
+}))
 
 const dlgTitle = computed(() => (isEdit.value ? '编辑用户' : '新建用户'))
 
@@ -78,6 +95,7 @@ const openCreate = (): void => {
     status: USER_STATUS_NORMAL,
   })
   dlgVisible.value = true
+  void nextTick(() => dlgFormRef.value?.clearValidate())
 }
 
 const openEdit = (row: SysUser): void => {
@@ -94,20 +112,18 @@ const openEdit = (row: SysUser): void => {
     status: row.status ?? USER_STATUS_NORMAL,
   })
   dlgVisible.value = true
+  void nextTick(() => dlgFormRef.value?.clearValidate())
 }
 
 const submitDialog = async (): Promise<void> => {
-  const username = (form.username ?? '').trim()
-  if (!username) {
-    ElMessage.warning('请填写用户名')
+  const formEl = dlgFormRef.value
+  if (!formEl) return
+  try {
+    await formEl.validate()
+  } catch {
     return
   }
-  if (!isEdit.value) {
-    if (!(form.password ?? '').trim()) {
-      ElMessage.warning('请填写初始密码')
-      return
-    }
-  }
+  const username = (form.username ?? '').trim()
   dlgSaving.value = true
   try {
     if (isEdit.value && form.id != null) {
@@ -124,7 +140,6 @@ const submitDialog = async (): Promise<void> => {
         body.password = form.password
       }
       unwrapResult(await adminUsersApi.updateUser(form.id, body))
-      ElMessage.success('已保存')
     } else {
       unwrapResult(
         await adminUsersApi.createUser({
@@ -138,7 +153,6 @@ const submitDialog = async (): Promise<void> => {
           status: form.status,
         }),
       )
-      ElMessage.success('已创建')
     }
     dlgVisible.value = false
     await fetchList()
@@ -151,7 +165,7 @@ const submitDialog = async (): Promise<void> => {
 
 const removeRow = async (row: SysUser): Promise<void> => {
   try {
-    await ElMessageBox.confirm(`确定删除用户「${row.username}」？（逻辑删除）`, '确认', {
+    await ElMessageBox.confirm(`确认删除用户「${row.username}」？`, '确认', {
       type: 'warning',
     })
   } catch {
@@ -159,7 +173,6 @@ const removeRow = async (row: SysUser): Promise<void> => {
   }
   try {
     unwrapResult(await adminUsersApi.deleteUser(row.id))
-    ElMessage.success('已删除')
     await fetchList()
   } catch (e) {
     showSubmitError(e, '删除失败')
@@ -218,11 +231,11 @@ onMounted(() => {
     />
 
     <el-dialog v-model="dlgVisible" :title="dlgTitle" width="480px" destroy-on-close>
-      <el-form label-width="88px">
-        <el-form-item label="用户名" required>
+      <el-form ref="dlgFormRef" :model="form" :rules="dlgRules" label-width="88px">
+        <el-form-item label="用户名" prop="username">
           <el-input v-model="form.username" :disabled="isEdit" autocomplete="off" />
         </el-form-item>
-        <el-form-item :label="isEdit ? '新密码' : '初始密码'" :required="!isEdit">
+        <el-form-item :label="isEdit ? '新密码' : '初始密码'" prop="password">
           <el-input v-model="form.password" type="password" show-password autocomplete="new-password" :placeholder="isEdit ? '留空则不修改' : ''" />
         </el-form-item>
         <el-form-item label="昵称">

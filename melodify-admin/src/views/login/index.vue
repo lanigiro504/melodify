@@ -37,8 +37,7 @@ const onSubmit = async () => {
 <template>
   <div class="login-page">
     <div class="card">
-      <h1>Melodify 后台登录</h1>
-      <p class="hint">使用具备管理员角色的账号登录（与前台同一套 JWT，角色键需为 admin）。</p>
+      <h1>管理控制台</h1>
       <el-form @submit.prevent="onSubmit">
         <el-form-item>
           <el-input v-model="form.username" size="large" placeholder="用户名" :prefix-icon="User" autocomplete="username" />
@@ -79,15 +78,11 @@ const onSubmit = async () => {
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
 }
 h1 {
-  margin: 0 0 0.5rem;
-  font-size: 1.35rem;
+  margin: 0 0 1.25rem;
+  font-size: 1.375rem;
+  font-weight: 600;
   color: var(--el-text-color-primary);
-}
-.hint {
-  margin: 0 0 1.5rem;
-  font-size: 13px;
-  color: var(--el-text-color-secondary);
-  line-height: 1.5;
+  text-align: center;
 }
 .submit {
   width: 100%;

@@ -3,8 +3,8 @@
  * sys_role：分页、新建、编辑、删除。
  */
 import { Delete, Edit, Plus } from '@element-plus/icons-vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { computed, onMounted, reactive, ref } from 'vue'
+import { ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
+import { computed, nextTick, onMounted, reactive, ref } from 'vue'
 import * as adminRolesApi from '@/api/adminRoles'
 import type { SysRole } from '@/types/api'
 import { unwrapResult } from '@/utils/apiResult'
@@ -31,6 +31,12 @@ const form = reactive<Partial<SysRole>>({
   remark: '',
 })
 
+const dlgFormRef = ref<FormInstance>()
+const dlgRules: FormRules = {
+  roleName: [{ required: true, message: '请输入名称', trigger: 'blur' }],
+  roleKey: [{ required: true, message: '请输入角色标识', trigger: 'blur' }],
+}
+
 const dlgTitle = computed(() => (isEdit.value ? '编辑角色' : '新建角色'))
 
 const fetchList = async () => {
@@ -56,6 +62,7 @@ const openCreate = (): void => {
     remark: '',
   })
   dlgVisible.value = true
+  void nextTick(() => dlgFormRef.value?.clearValidate())
 }
 
 const openEdit = (row: SysRole): void => {
@@ -68,15 +75,19 @@ const openEdit = (row: SysRole): void => {
     remark: row.remark ?? '',
   })
   dlgVisible.value = true
+  void nextTick(() => dlgFormRef.value?.clearValidate())
 }
 
 const submitDialog = async (): Promise<void> => {
-  const roleName = (form.roleName ?? '').trim()
-  const roleKey = (form.roleKey ?? '').trim().toLowerCase()
-  if (!roleName || !roleKey) {
-    ElMessage.warning('请填写角色名称与角色键')
+  const formEl = dlgFormRef.value
+  if (!formEl) return
+  try {
+    await formEl.validate()
+  } catch {
     return
   }
+  const roleName = (form.roleName ?? '').trim()
+  const roleKey = (form.roleKey ?? '').trim().toLowerCase()
   dlgSaving.value = true
   try {
     if (isEdit.value && form.id != null) {
@@ -88,7 +99,6 @@ const submitDialog = async (): Promise<void> => {
           remark: form.remark?.trim() || '',
         }),
       )
-      ElMessage.success('已保存')
     } else {
       unwrapResult(
         await adminRolesApi.createRole({
@@ -98,7 +108,6 @@ const submitDialog = async (): Promise<void> => {
           remark: form.remark?.trim() || '',
         }),
       )
-      ElMessage.success('已创建')
     }
     dlgVisible.value = false
     await fetchList()
@@ -111,7 +120,7 @@ const submitDialog = async (): Promise<void> => {
 
 const removeRow = async (row: SysRole): Promise<void> => {
   try {
-    await ElMessageBox.confirm(`确定删除角色「${row.roleName}」？（逻辑删除）`, '确认', {
+    await ElMessageBox.confirm(`确认删除角色「${row.roleName}」？`, '确认', {
       type: 'warning',
     })
   } catch {
@@ -119,7 +128,6 @@ const removeRow = async (row: SysRole): Promise<void> => {
   }
   try {
     unwrapResult(await adminRolesApi.deleteRole(row.id))
-    ElMessage.success('已删除')
     await fetchList()
   } catch (e) {
     showSubmitError(e, '删除失败')
@@ -137,7 +145,7 @@ onMounted(() => void fetchList())
     <el-table v-loading="loading" :data="rows" border stripe row-key="id">
       <el-table-column prop="id" label="ID" width="72" />
       <el-table-column prop="roleName" label="名称" min-width="120" />
-      <el-table-column prop="roleKey" label="角色键" min-width="120">
+      <el-table-column prop="roleKey" label="标识" min-width="120">
         <template #default="{ row }">
           <code class="rk">{{ row.roleKey }}</code>
         </template>
@@ -174,12 +182,12 @@ onMounted(() => void fetchList())
     />
 
     <el-dialog v-model="dlgVisible" :title="dlgTitle" width="480px" destroy-on-close>
-      <el-form label-width="88px">
-        <el-form-item label="名称" required>
+      <el-form ref="dlgFormRef" :model="form" :rules="dlgRules" label-width="88px">
+        <el-form-item label="名称" prop="roleName">
           <el-input v-model="form.roleName" />
         </el-form-item>
-        <el-form-item label="角色键" required>
-          <el-input v-model="form.roleKey" :disabled="isEdit" placeholder="如 admin、common，新建后不建议改键" />
+        <el-form-item label="角色标识" prop="roleKey">
+          <el-input v-model="form.roleKey" :disabled="isEdit" placeholder="英文标识，如 admin" />
         </el-form-item>
         <el-form-item label="状态">
           <el-radio-group v-model="form.status">

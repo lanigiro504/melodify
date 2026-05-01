@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Goods, EditPen } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
 import { onMounted, reactive, ref } from 'vue'
 import type { PointProduct } from '@/types/api'
 import * as adminPointProductsApi from '@/api/adminPointProducts'
@@ -48,7 +47,6 @@ const saveEdit = async () => {
   saving.value = true
   try {
     unwrapResult(await adminPointProductsApi.updatePointProductAdmin(editing.id, { ...editing }))
-    ElMessage.success('已保存')
     dlg.value = false
     await loadList()
   } catch (e) {

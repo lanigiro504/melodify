@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { clearAdminCredentialStorage, getStoredToken } from '@/utils/sessionCredentials'
+import { SilentSessionRedirect } from '@/utils/httpSilent'
 
 export const getAuthorizationHeader = (): Record<string, string> => {
   const t = getStoredToken()
@@ -25,7 +26,11 @@ http.interceptors.request.use((config) => {
 http.interceptors.response.use(
   (res) => {
     const d = res.data
+    const method = String(res.config.method || '').toLowerCase()
+    const url = String(res.config.url || '')
+    const isLoginFailureContext = method === 'post' && url.includes('/client/auth/login')
     if (
+      !isLoginFailureContext &&
       d &&
       typeof d === 'object' &&
       'code' in d &&
@@ -38,6 +43,7 @@ http.interceptors.response.use(
           void r.replace({ path: '/login', query: { redirect: r.currentRoute.value.fullPath } })
         }
       })
+      return Promise.reject(new SilentSessionRedirect())
     }
     return res
   },

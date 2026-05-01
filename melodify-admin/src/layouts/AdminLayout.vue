@@ -30,7 +30,10 @@ const handleLogout = () => {
 <template>
   <el-container class="admin-shell">
     <el-aside width="220px" class="aside">
-      <div class="brand">Melodify 后台</div>
+      <div class="brand">
+        <span class="brand-name">Melodify</span>
+        <span class="brand-tag">控制台</span>
+      </div>
       <el-menu
         :default-active="active"
         :default-openeds="['ops']"
@@ -54,7 +57,7 @@ const handleLogout = () => {
         <el-sub-menu index="ops">
           <template #title>
             <el-icon><Postcard /></el-icon>
-            <span>业务运营</span>
+            <span>运营管理</span>
           </template>
           <el-menu-item index="/tasks">
             <el-icon><Cpu /></el-icon>
@@ -83,7 +86,7 @@ const handleLogout = () => {
       <el-header class="header">
         <div class="header-left">
           <el-icon class="hdr-icon"><IconMenu /></el-icon>
-          <span class="hdr-title">运营控制台</span>
+          <span class="hdr-title">工作台</span>
         </div>
         <div class="header-right">
           <span class="who">{{ auth.displayName || '管理员' }}</span>
@@ -106,10 +109,23 @@ const handleLogout = () => {
   color: #e2e8f0;
 }
 .brand {
-  padding: 1.25rem 1rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
+  padding: 1.125rem 1rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.brand-name {
+  font-weight: 700;
+  font-size: 1.125rem;
+  letter-spacing: 0.03em;
+}
+.brand-tag {
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(148, 163, 184, 0.95);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 .menu {
   border-right: none;
