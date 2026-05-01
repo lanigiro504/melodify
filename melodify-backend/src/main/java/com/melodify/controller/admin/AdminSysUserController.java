@@ -39,7 +39,9 @@ public class AdminSysUserController {
 	public Result<IPage<SysUser>> page(
 			@RequestParam(defaultValue = "1") long current,
 			@RequestParam(defaultValue = "10") long size) {
-		return Result.success(sysUserService.page(new Page<>(current, size)));
+		IPage<SysUser> pg = sysUserService.page(new Page<>(current, size));
+		pg.getRecords().forEach(u -> u.setPassword(null));
+		return Result.success(pg);
 	}
 
 	/**
@@ -47,7 +49,11 @@ public class AdminSysUserController {
 	 */
 	@GetMapping("/{id}")
 	public Result<SysUser> getById(@PathVariable Long id) {
-		return Result.success(sysUserService.getById(id));
+		SysUser u = sysUserService.getById(id);
+		if (u != null) {
+			u.setPassword(null);
+		}
+		return Result.success(u);
 	}
 
 	/**
@@ -55,7 +61,7 @@ public class AdminSysUserController {
 	 */
 	@PostMapping
 	public Result<Boolean> create(@RequestBody SysUser body) {
-		return Result.success(sysUserService.save(body));
+		return Result.success(sysUserService.adminCreate(body));
 	}
 
 	/**
@@ -63,8 +69,7 @@ public class AdminSysUserController {
 	 */
 	@PutMapping("/{id}")
 	public Result<Boolean> update(@PathVariable Long id, @RequestBody SysUser body) {
-		body.setId(id);
-		return Result.success(sysUserService.updateById(body));
+		return Result.success(sysUserService.adminUpdate(id, body));
 	}
 
 	/**

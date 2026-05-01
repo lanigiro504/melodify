@@ -29,4 +29,14 @@ public interface SysUserService extends IService<SysUser> {
 	 * 更新本人可写字段（昵称、头像、邮箱、手机）；不传或 null 的字段不修改。
 	 */
 	void updateSelfProfile(Long userId, UserProfileDTO dto);
+
+	/**
+	 * 管理端新建用户：校验用户名唯一，明文密码 MD5 入库（与登录校验一致）。
+	 */
+	boolean adminCreate(SysUser user);
+
+	/**
+	 * 管理端更新用户：可改用户名/昵称/头像/联系方式/积分/角色/状态；密码非空时按 MD5 覆盖写入。
+	 */
+	boolean adminUpdate(Long id, SysUser body);
 }

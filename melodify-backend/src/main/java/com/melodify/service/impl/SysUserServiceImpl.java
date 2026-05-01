@@ -126,4 +126,121 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
 			throw new BizException(500, "资料更新失败，请稍后重试");
 		}
 	}
+
+	@Override
+	@Transactional(rollbackFor = Exception.class)
+	public boolean adminCreate(SysUser user) {
+		String username = normalize(user.getUsername());
+		if (!StringUtils.hasText(username)) {
+			throw new BizException(400, "用户名不能为空");
+		}
+		long exists = lambdaQuery().eq(SysUser::getUsername, username).count();
+		if (exists > 0) {
+			throw new BizException(409, "用户名已存在");
+		}
+		String rawPassword = normalize(user.getPassword());
+		if (!StringUtils.hasText(rawPassword)) {
+			throw new BizException(400, "初始密码不能为空");
+		}
+
+		user.setUsername(username);
+		user.setPassword(DigestUtils.md5DigestAsHex(rawPassword.getBytes(StandardCharsets.UTF_8)));
+		if (user.getNickname() != null) {
+			user.setNickname(normalize(user.getNickname()));
+		}
+		if (user.getAvatar() != null) {
+			user.setAvatar(normalize(user.getAvatar()));
+		}
+		if (user.getEmail() != null) {
+			user.setEmail(normalize(user.getEmail()));
+		}
+		if (user.getPhone() != null) {
+			user.setPhone(normalize(user.getPhone()));
+		}
+		if (user.getStatus() == null) {
+			user.setStatus(DEFAULT_STATUS_NORMAL);
+		}
+		if (user.getRoleId() == null) {
+			user.setRoleId(DEFAULT_ROLE_ID);
+		}
+		if (user.getPoints() == null) {
+			user.setPoints(Math.max(0, melodifyUserProperties.getSignupBonusPoints()));
+		}
+
+		boolean ok = save(user);
+		if (!ok) {
+			throw new BizException(500, "保存用户失败");
+		}
+		return true;
+	}
+
+	@Override
+	@Transactional(rollbackFor = Exception.class)
+	public boolean adminUpdate(Long id, SysUser body) {
+		SysUser existing = getById(id);
+		if (existing == null) {
+			throw new BizException(404, "用户不存在");
+		}
+
+		String usernameNorm = normalize(body.getUsername());
+		if (StringUtils.hasText(usernameNorm)) {
+			long dup = lambdaQuery()
+					.eq(SysUser::getUsername, usernameNorm)
+					.ne(SysUser::getId, id)
+					.count();
+			if (dup > 0) {
+				throw new BizException(409, "用户名已被占用");
+			}
+		}
+
+		var uw = lambdaUpdate().eq(SysUser::getId, id);
+
+		boolean any = false;
+		if (StringUtils.hasText(usernameNorm)) {
+			uw.set(SysUser::getUsername, usernameNorm);
+			any = true;
+		}
+		if (body.getNickname() != null) {
+			uw.set(SysUser::getNickname, normalize(body.getNickname()));
+			any = true;
+		}
+		if (body.getAvatar() != null) {
+			uw.set(SysUser::getAvatar, normalize(body.getAvatar()));
+			any = true;
+		}
+		if (body.getEmail() != null) {
+			uw.set(SysUser::getEmail, normalize(body.getEmail()));
+			any = true;
+		}
+		if (body.getPhone() != null) {
+			uw.set(SysUser::getPhone, normalize(body.getPhone()));
+			any = true;
+		}
+		if (body.getPoints() != null) {
+			uw.set(SysUser::getPoints, body.getPoints());
+			any = true;
+		}
+		if (body.getRoleId() != null) {
+			uw.set(SysUser::getRoleId, body.getRoleId());
+			any = true;
+		}
+		if (body.getStatus() != null) {
+			uw.set(SysUser::getStatus, body.getStatus());
+			any = true;
+		}
+		String rawPassword = normalize(body.getPassword());
+		if (StringUtils.hasText(rawPassword)) {
+			uw.set(SysUser::getPassword, DigestUtils.md5DigestAsHex(rawPassword.getBytes(StandardCharsets.UTF_8)));
+			any = true;
+		}
+
+		if (!any) {
+			return true;
+		}
+		boolean ok = uw.update();
+		if (!ok) {
+			throw new BizException(500, "更新用户失败");
+		}
+		return true;
+	}
 }
