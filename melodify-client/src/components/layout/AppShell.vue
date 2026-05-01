@@ -25,6 +25,7 @@ const onLogout = () => {
       <nav class="app-nav" aria-label="主导航">
         <RouterLink to="/" class="nav-link">首页</RouterLink>
         <RouterLink v-if="isAuthenticated" to="/generate" class="nav-link">创作</RouterLink>
+        <RouterLink v-if="isAuthenticated" to="/works" class="nav-link">我的作品</RouterLink>
         <RouterLink to="/about" class="nav-link">关于</RouterLink>
         <template v-if="isAuthenticated">
           <span class="nav-user">{{ displayName }}</span>
@@ -126,7 +127,7 @@ const onLogout = () => {
 .app-main {
   flex: 1;
   width: 100%;
-  max-width: 960px;
+  max-width: min(1080px, 100%);
   margin: 0 auto;
   padding: 2rem 1.5rem 3rem;
 }

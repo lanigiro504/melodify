@@ -5,6 +5,7 @@
 import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage } from 'element-plus'
 import { computed, onUnmounted, reactive, ref } from 'vue'
+import { RouterLink } from 'vue-router'
 import { getMusicAssetByBusinessTask } from '@/api/musicAssets'
 import { getMusicTaskByBusinessId, submitMusicGenerate } from '@/api/musicTasks'
 import { MUSIC_TASK_STATUS, musicTaskStatusText } from '@/types/musicTask'
@@ -181,6 +182,9 @@ const hint =
     <p class="page-desc">
       默认使用「简单模式」（仅描述创意，自动生成歌词）；高级用户可开启自定义模式并提供风格与标题。
     </p>
+    <p class="page-cross">
+      <RouterLink class="cross-link" to="/works">我的全部生成记录</RouterLink>
+    </p>
     <p v-if="hint" class="page-hint">{{ hint }}</p>
 
     <el-form
@@ -258,6 +262,20 @@ const hint =
   margin: 0 0 0.75rem;
   color: var(--color-text);
   opacity: 0.9;
+}
+
+.page-cross {
+  margin: 0 0 1rem;
+  font-size: 0.9375rem;
+}
+
+.cross-link {
+  color: var(--el-color-primary);
+  font-weight: 600;
+}
+
+.cross-link:hover {
+  text-decoration: underline;
 }
 
 .page-hint {

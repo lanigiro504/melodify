@@ -25,6 +25,12 @@ const router = createRouter({
       component: () => import('@/views/generate/index.vue'),
     },
     {
+      path: '/works',
+      name: 'works',
+      meta: { requiresAuth: true },
+      component: () => import('@/views/works/index.vue'),
+    },
+    {
       path: '/about',
       name: 'about',
       component: () => import('@/views/about/index.vue'),

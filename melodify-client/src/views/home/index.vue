@@ -41,7 +41,10 @@ const goLogin = () => {
         <p class="hero__greeting">
           欢迎回来，<strong>{{ displayName }}</strong>
         </p>
-        <p class="hero__hint">更多创作功能将陆续接入，敬请期待。</p>
+        <div class="hero__quick">
+          <el-button type="primary" round @click="router.push('/generate')">去创作</el-button>
+          <el-button round @click="router.push('/works')">我的作品</el-button>
+        </div>
       </div>
     </section>
   </div>
@@ -104,8 +107,11 @@ const goLogin = () => {
   margin-bottom: 0.5rem;
 }
 
-.hero__hint {
-  font-size: 0.9375rem;
-  color: var(--el-text-color-secondary);
+.hero__quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+  margin-top: 1rem;
 }
 </style>

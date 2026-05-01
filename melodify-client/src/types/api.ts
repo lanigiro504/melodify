@@ -64,3 +64,12 @@ export interface UserRegisterBody {
   username: string
   password: string
 }
+
+/** 与 MyBatis-Plus `IPage` 序列化一致（Spring 默认驼峰） */
+export interface PageRecords<T> {
+  records: T[]
+  total: number
+  size: number
+  current: number
+  pages?: number
+}
