@@ -16,4 +16,5 @@ melodify:
   music-generation:
     provider: suno
   suno:
-    api-key: "在此填写 Suno API Key"
+    # 不要用仓库里的占位符提交密钥；可复制为 application-local.yml 后填写或使用环境变量 SUNO_API_KEY
+    api-key: "YOUR_SUNO_API_KEY"
