@@ -4,7 +4,6 @@ import {
   Cpu,
   FolderOpened,
   Goods,
-  HomeFilled,
   Key,
   Menu as IconMenu,
   Postcard,
@@ -42,10 +41,6 @@ const handleLogout = () => {
         background-color="#1a1a2e"
         text-color="#cbd5e1"
       >
-        <el-menu-item index="/">
-          <el-icon><HomeFilled /></el-icon>
-          <span>概览</span>
-        </el-menu-item>
         <el-menu-item index="/users">
           <el-icon><UserFilled /></el-icon>
           <span>用户管理</span>
