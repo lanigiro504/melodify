@@ -145,7 +145,10 @@ const pollOnce = async (taskBizId: string): Promise<boolean> => {
           title: form.title.trim() || form.prompt.trim().slice(0, 48) || '新作品',
           fileUrl: asset.fileUrl,
           subtitle: form.modelCode,
-          lyrics: extractTrackLyrics(form.prompt, null),
+          lyrics: extractTrackLyrics(form.prompt, {
+            customMode: form.customMode,
+            instrumental: form.instrumental,
+          }),
           durationSec: asset.durationSec ?? undefined,
         })
         ElMessage.success('生成完成，可以试听')

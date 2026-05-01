@@ -14,6 +14,7 @@ const lyricsBoxRef = ref<HTMLElement | null>(null)
 const currentTime = ref(0)
 const mediaDuration = ref(0)
 const lastResolvedUrl = ref('')
+const loadedSrc = ref('')
 
 const lyricLines = computed(() => {
   const raw = current.value?.lyrics?.trim()
@@ -45,15 +46,24 @@ const timeLabel = computed(() => {
   return `${fmt(currentTime.value)} / ${fmt(mediaDuration.value)}`
 })
 
+const progressPercent = computed(() => {
+  if (!mediaDuration.value) return 0
+  return Math.min(100, Math.max(0, (currentTime.value / mediaDuration.value) * 100))
+})
+
 const syncPlayback = async () => {
   const el = audioRef.value
   if (!el) return
   if (!resolvedSrc.value) {
     el.pause()
+    loadedSrc.value = ''
     return
   }
-  el.src = resolvedSrc.value
-  el.load()
+  if (loadedSrc.value !== resolvedSrc.value) {
+    el.src = resolvedSrc.value
+    el.load()
+    loadedSrc.value = resolvedSrc.value
+  }
   await nextTick()
   if (!paused.value) {
     try {
@@ -79,6 +89,7 @@ watch(
     }
     if (!current.value) {
       lastResolvedUrl.value = ''
+      loadedSrc.value = ''
       currentTime.value = 0
       mediaDuration.value = 0
     }
@@ -133,8 +144,11 @@ function seekRatio(ratio: number) {
       @timeupdate="onTimeUpdate"
       @loadedmetadata="onLoadedMetadata"
     />
-    <div class="player-shell melodify-glass-card">
+    <div class="player-shell">
       <div class="player-top">
+        <div class="disc" :class="{ 'disc--playing': !paused }">
+          <span>{{ (current.title || 'M').slice(0, 1) }}</span>
+        </div>
         <div class="track-meta">
           <span class="t">{{ current.title || '未命名' }}</span>
           <span v-if="current.subtitle" class="s">{{ current.subtitle }}</span>
@@ -149,6 +163,9 @@ function seekRatio(ratio: number) {
       </div>
 
       <div v-if="mediaDuration > 0" class="seek-wrap">
+        <div class="seek-bg" aria-hidden="true">
+          <span :style="{ width: `${progressPercent}%` }" />
+        </div>
         <input
           class="seek"
           type="range"
@@ -161,7 +178,7 @@ function seekRatio(ratio: number) {
       </div>
 
       <div v-if="lyricLines.length" class="lyrics-block">
-        <p class="lyrics-hint">歌词随进度大致高亮（按整首时长均分行；非 LRC 精确时间轴）</p>
+        <p class="lyrics-hint">歌词预览 · 无时间轴时按播放进度大致同步</p>
         <div ref="lyricsBoxRef" class="lyrics-scroll">
           <p
             v-for="(line, i) in lyricLines"
@@ -182,36 +199,59 @@ function seekRatio(ratio: number) {
 .melodify-player {
   position: fixed;
   left: 50%;
-  bottom: 1.25rem;
+  bottom: 1.05rem;
   transform: translateX(-50%);
   z-index: 3000;
-  width: min(32rem, calc(100vw - 2rem));
+  width: min(34rem, calc(100vw - 1.5rem));
 }
 
 .melodify-player--with-lyrics {
-  width: min(38rem, calc(100vw - 2rem));
+  width: min(40rem, calc(100vw - 1.5rem));
 }
 
 .player-shell {
-  border-radius: 1.25rem;
+  border-radius: 1.5rem;
   border: 1px solid rgba(148, 163, 184, 0.18);
-  background: rgba(255, 255, 255, 0.97);
-  padding: 0.75rem 1rem 0.85rem;
-  max-height: min(70vh, 22rem);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow:
+    0 18px 48px rgba(15, 23, 42, 0.14),
+    0 1px 0 rgba(255, 255, 255, 0.7) inset;
+  backdrop-filter: blur(18px);
+  padding: 0.8rem;
+  max-height: min(70vh, 23rem);
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.65rem;
 }
 
 .player-top {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.disc {
+  width: 2.75rem;
+  height: 2.75rem;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  color: #fff;
+  font-weight: 900;
+  background:
+    radial-gradient(circle at center, rgba(255, 255, 255, 0.96) 0 12%, transparent 13% 100%),
+    linear-gradient(135deg, #6d5dfc, #22c55e);
+  box-shadow: 0 10px 24px rgba(109, 93, 252, 0.24);
+}
+
+.disc--playing {
+  animation: spin 9s linear infinite;
 }
 
 .track-meta {
   min-width: 0;
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 0.1rem;
@@ -247,12 +287,37 @@ function seekRatio(ratio: number) {
 }
 
 .seek-wrap {
-  padding: 0 0.15rem;
+  position: relative;
+  padding: 0.25rem 0;
+}
+
+.seek-bg {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 0.42rem;
+  overflow: hidden;
+  border-radius: 999px;
+  transform: translateY(-50%);
+  background: #e5e7eb;
+}
+
+.seek-bg span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #3b82f6, #6d5dfc);
 }
 
 .seek {
+  position: relative;
+  z-index: 1;
+  display: block;
   width: 100%;
-  height: 0.35rem;
+  height: 1rem;
+  margin: 0;
+  opacity: 0;
   accent-color: var(--el-color-primary);
   cursor: pointer;
 }
@@ -268,21 +333,23 @@ function seekRatio(ratio: number) {
 .lyrics-hint {
   margin: 0;
   font-size: 0.7rem;
-  color: var(--melodify-muted, #94a3b8);
+  color: #94a3b8;
   line-height: 1.4;
 }
 
 .lyrics-scroll {
   overflow-y: auto;
-  max-height: 11rem;
-  padding-right: 0.25rem;
+  max-height: 11.5rem;
+  padding: 0.25rem;
+  border-radius: 1rem;
+  background: #f8fafc;
   scrollbar-width: thin;
 }
 
 .lyrics-line {
   margin: 0;
-  padding: 0.35rem 0.5rem;
-  border-radius: 0.5rem;
+  padding: 0.45rem 0.65rem;
+  border-radius: 0.75rem;
   font-size: 0.88rem;
   line-height: 1.55;
   color: var(--melodify-muted, #64748b);
@@ -292,28 +359,50 @@ function seekRatio(ratio: number) {
 }
 
 .lyrics-line--active {
-  color: var(--el-color-primary);
+  color: #2563eb;
   font-weight: 800;
-  background: rgba(109, 93, 252, 0.08);
+  background: #eef2ff;
 }
 
 .icon-btn {
   border: none;
   border-radius: 999px;
-  padding: 0.35rem 0.85rem;
+  padding: 0.42rem 0.9rem;
   font: inherit;
   font-weight: 800;
   cursor: pointer;
-  background: var(--el-color-primary);
+  background: linear-gradient(135deg, #3b82f6, #6d5dfc);
   color: #fff;
+  box-shadow: 0 10px 20px rgba(59, 130, 246, 0.2);
 }
 
 .icon-btn.ghost {
   background: #f1f5f9;
   color: var(--melodify-strong, #0f172a);
+  box-shadow: none;
 }
 
 audio {
   display: none;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 520px) {
+  .player-top {
+    align-items: flex-start;
+  }
+
+  .player-actions {
+    flex-direction: column;
+  }
+
+  .icon-btn {
+    padding-inline: 0.75rem;
+  }
 }
 </style>
