@@ -4,7 +4,7 @@
  */
 import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage } from 'element-plus'
-import { onUnmounted, reactive, ref } from 'vue'
+import { computed, onUnmounted, reactive, ref } from 'vue'
 import { getMusicAssetByBusinessTask } from '@/api/musicAssets'
 import { getMusicTaskByBusinessId, submitMusicGenerate } from '@/api/musicTasks'
 import { MUSIC_TASK_STATUS, musicTaskStatusText } from '@/types/musicTask'
@@ -30,11 +30,50 @@ const form = reactive({
   prompt: '',
   style: '',
   title: '',
+  /** 对齐 Suno 文档：自定义模式需提供 style/title；关闭时仅 prompt（建议 ≤500 字） */
+  customMode: false,
   instrumental: false,
 })
 
-const rules: FormRules = {
-  prompt: [{ required: true, message: '请输入提示词或歌词', trigger: 'blur' }],
+/** 文档：非自定义 prompt ≤500；自定义 V4 系最高 3000，其它更高；前端取宽松上限避免误判 */
+const promptMaxLen = computed(() => (form.customMode ? 5000 : 500))
+
+/** 自定义 + 纯器乐时 Suno 可不填 prompt */
+const rules = computed<FormRules>(() => ({
+  prompt: [
+    {
+      validator: (_r, val, cb) => {
+        if (form.customMode && form.instrumental) {
+          cb()
+          return
+        }
+        if (!String(val ?? '').trim()) {
+          cb(new Error('请输入提示词'))
+          return
+        }
+        cb()
+      },
+      trigger: 'blur',
+    },
+  ],
+}))
+
+/** Suno OpenAPI：自定义模式下 instrumental=false 时需 style + title；true 时需 style + title */
+const validateBusinessRules = (): boolean => {
+  if (!form.customMode) return true
+  if (!form.style.trim()) {
+    ElMessage.warning('自定义模式下请填写音乐风格')
+    return false
+  }
+  if (!form.title.trim()) {
+    ElMessage.warning('自定义模式下请填写成品标题')
+    return false
+  }
+  if (!form.instrumental && !form.prompt.trim()) {
+    ElMessage.warning('带人声时请将歌词写入提示词（将作为精确歌词使用）')
+    return false
+  }
+  return true
 }
 
 const stopPoll = () => {
@@ -94,17 +133,21 @@ const startPoll = (taskBizId: string) => {
 
 const onSubmit = async () => {
   if (!(await validateFormRef(formRef))) return
+  if (!validateBusinessRules()) return
   submitting.value = true
   audioUrl.value = null
   errorDetail.value = ''
   stopPoll()
 
+  /** 后端会按文档推断 Suno JSON；此处显式传 customMode，避免只靠 style/title 猜测 */
   const params: Record<string, unknown> = {
-    customMode: true,
+    customMode: form.customMode,
     instrumental: form.instrumental,
   }
-  if (form.style.trim()) params.style = form.style.trim()
-  if (form.title.trim()) params.title = form.title.trim()
+  if (form.customMode) {
+    if (form.style.trim()) params.style = form.style.trim()
+    if (form.title.trim()) params.title = form.title.trim()
+  }
 
   try {
     const res = unwrapResult(
@@ -131,7 +174,9 @@ const hint =
 <template>
   <div class="generate-page">
     <h1 class="page-title">创作音乐</h1>
-    <p class="page-desc">填写提示词与风格，系统将异步生成曲目；完成后可在此试听。</p>
+    <p class="page-desc">
+      默认使用「简单模式」（仅描述创意，自动生成歌词）；高级用户可开启自定义模式并提供风格与标题。
+    </p>
     <p v-if="hint" class="page-hint">{{ hint }}</p>
 
     <el-form
@@ -145,29 +190,44 @@ const hint =
     >
       <el-form-item label="模型" prop="modelCode">
         <el-select v-model="form.modelCode" placeholder="请选择" style="width: 100%">
+          <el-option label="V5_5" value="V5_5" />
+          <el-option label="V5" value="V5" />
+          <el-option label="V4_5PLUS" value="V4_5PLUS" />
+          <el-option label="V4_5ALL" value="V4_5ALL" />
           <el-option label="V4_5（推荐）" value="V4_5" />
           <el-option label="V4" value="V4" />
         </el-select>
       </el-form-item>
-      <el-form-item label="提示词 / 歌词" prop="prompt">
+      <el-form-item label="提示词" prop="prompt">
         <el-input
           v-model="form.prompt"
           type="textarea"
           :rows="5"
-          placeholder="描述你想要的音乐氛围、主题或直接把歌词粘贴在此"
-          maxlength="2000"
+          :placeholder="
+            form.customMode ?
+              form.instrumental ?
+                '纯器乐可不填'
+              : '将作为精确歌词写入 Suno（自定义模式）'
+            : '简单模式：一段话描述你想要的音乐即可（≤500 字）'
+          "
+          :maxlength="promptMaxLen"
           show-word-limit
         />
       </el-form-item>
-      <el-form-item label="风格（可选）">
-        <el-input v-model="form.style" placeholder="如：民谣流行、电子舞曲" maxlength="128" />
-      </el-form-item>
-      <el-form-item label="标题（可选）">
-        <el-input v-model="form.title" placeholder="成品标题，展示用" maxlength="120" />
-      </el-form-item>
       <el-form-item label="">
-        <el-checkbox v-model="form.instrumental">纯器乐（无人声）</el-checkbox>
+        <el-checkbox v-model="form.customMode">自定义模式（需填写风格与标题）</el-checkbox>
       </el-form-item>
+      <template v-if="form.customMode">
+        <el-form-item label="风格">
+          <el-input v-model="form.style" placeholder="如：爵士、民谣、电子" maxlength="1000" />
+        </el-form-item>
+        <el-form-item label="标题">
+          <el-input v-model="form.title" placeholder="成品标题" maxlength="100" />
+        </el-form-item>
+        <el-form-item label="">
+          <el-checkbox v-model="form.instrumental">纯器乐（无人声）</el-checkbox>
+        </el-form-item>
+      </template>
       <el-form-item>
         <el-button type="primary" :loading="submitting" @click="onSubmit">生成</el-button>
       </el-form-item>

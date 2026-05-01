@@ -15,17 +15,25 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
 /**
  * 使用 SunoAPI 官方路径：POST /generate + 轮询 GET /generate/record-info。
  * <p>与 JS 示例一致：成功时从 {@code data.response.data[0]} 取 {@code audio_url}、标题与时长。</p>
+ * <p>请求体对齐 OpenAPI：必选 {@code customMode}、{@code instrumental}、{@code callBackUrl}、{@code model}；
+ * 非自定义模式下只传提示词与其它参数清空；回调仅作合规占位时可用配置或内置占位 URI，实际完成态仍可依赖轮询。</p>
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class MusicSunoGenerationRunner {
+
+	/** Suno 文档允许的可选字段，从 {@code params} 原样透出（不传则不写入 JSON）。 */
+	private static final List<String> SUNO_OPTIONAL_PARAM_KEYS =
+			List.of("negativeTags", "vocalGender", "styleWeight", "weirdnessConstraint",
+					"audioWeight", "personaId", "personaModel");
 
 	private final MusicTaskService musicTaskService;
 	private final SunoApiClient sunoApiClient;
@@ -137,27 +145,26 @@ public class MusicSunoGenerationRunner {
 
 	private JsonNode buildGeneratePayload(MusicTask task) {
 		ObjectNode root = objectMapper.createObjectNode();
+		Map<String, Object> p = task.getParams();
+
+		boolean customMode = resolveCustomMode(p);
+		boolean instrumental = resolveInstrumental(p);
+
+		root.put("customMode", customMode);
+		root.put("instrumental", instrumental);
+
 		if (StringUtils.hasText(task.getPrompt())) {
 			root.put("prompt", task.getPrompt().strip());
 		}
-		Map<String, Object> p = task.getParams();
-		if (p != null) {
+
+		if (customMode) {
 			copyJsonField(root, p, "style");
 			copyJsonField(root, p, "title");
-			if (p.containsKey("instrumental")) {
-				root.put("instrumental", toBoolean(p.get("instrumental"), false));
+			if (p != null) {
+				for (String key : SUNO_OPTIONAL_PARAM_KEYS) {
+					copyJsonField(root, p, key);
+				}
 			}
-			if (p.containsKey("customMode")) {
-				root.put("customMode", toBoolean(p.get("customMode"), true));
-			} else {
-				root.put("customMode", true);
-			}
-			if (p.containsKey("callBackUrl") && p.get("callBackUrl") != null) {
-				root.put("callBackUrl", String.valueOf(p.get("callBackUrl")));
-			}
-		} else {
-			root.put("customMode", true);
-			root.put("instrumental", false);
 		}
 
 		String model = null;
@@ -172,19 +179,51 @@ public class MusicSunoGenerationRunner {
 		}
 		root.put("model", model);
 
-		if (StringUtils.hasText(sunoApiProperties.getCallbackUrl())) {
-			if (!root.has("callBackUrl")) {
-				root.put("callBackUrl", sunoApiProperties.getCallbackUrl().strip());
-			}
-		}
-		if (!root.has("instrumental")) {
-			root.put("instrumental", false);
-		}
+		// OpenAPI 将 callBackUrl 标为必填；未配置服务端 webhook 时使用不可路由占位域名，只靠轮询落库。
+		String callback = resolveCallbackUrl(p);
+		root.put("callBackUrl", callback);
 		return root;
 	}
 
+	/**
+	 * 未显式传 {@code customMode} 时：若既没有 style 也没有 title，则按文档推荐走非自定义模式（仅 prompt）。
+	 */
+	private boolean resolveCustomMode(Map<String, Object> p) {
+		if (p != null && p.containsKey("customMode")) {
+			return toBoolean(p.get("customMode"), false);
+		}
+		return hasNonBlank(p, "style") || hasNonBlank(p, "title");
+	}
+
+	private static boolean resolveInstrumental(Map<String, Object> p) {
+		if (p != null && p.containsKey("instrumental")) {
+			return toBoolean(p.get("instrumental"), false);
+		}
+		return false;
+	}
+
+	private String resolveCallbackUrl(Map<String, Object> p) {
+		if (p != null && p.get("callBackUrl") != null) {
+			String fromTask = String.valueOf(p.get("callBackUrl")).strip();
+			if (StringUtils.hasText(fromTask)) {
+				return fromTask;
+			}
+		}
+		if (StringUtils.hasText(sunoApiProperties.getCallbackUrl())) {
+			return sunoApiProperties.getCallbackUrl().strip();
+		}
+		return "https://example.invalid/melodify-no-http-callback";
+	}
+
+	private static boolean hasNonBlank(Map<String, Object> p, String key) {
+		if (p == null || !p.containsKey(key) || p.get(key) == null) {
+			return false;
+		}
+		return StringUtils.hasText(String.valueOf(p.get(key)).strip());
+	}
+
 	private static void copyJsonField(ObjectNode root, Map<String, Object> params, String key) {
-		if (!params.containsKey(key) || params.get(key) == null) {
+		if (params == null || !params.containsKey(key) || params.get(key) == null) {
 			return;
 		}
 		Object v = params.get(key);

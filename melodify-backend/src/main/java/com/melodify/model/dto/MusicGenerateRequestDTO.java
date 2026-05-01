@@ -17,8 +17,8 @@ public class MusicGenerateRequestDTO {
 	@Size(max = 64)
 	private String modelCode;
 
-	/** 文本提示词，可为空。 */
-	@Size(max = 2000)
+	/** 文本提示词；Suno 非自定义至多约 500 字，自定义高阶模型至多约 5000 字，此处放宽由前端按模式提示。 */
+	@Size(max = 5000)
 	private String prompt;
 
 	/** 歌词全文或分段，最终会并入 {@code params} JSON 中的 {@code lyrics} 键以便扩展。 */

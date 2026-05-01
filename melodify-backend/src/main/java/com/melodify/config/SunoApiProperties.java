@@ -24,8 +24,7 @@ public class SunoApiProperties {
 	private long maxWaitMs = 600000;
 
 	/**
-	 * 可选回调 URL，写入 POST /generate 的 {@code callBackUrl}；
-	 * 若平台支持 webhook 仍可保留轮询作主路径。
+	 * 回调 URL，必填写入 POST {@code /generate}；不配则使用不可路由占位（RFC 6761 {@code *.invalid}），完成态依赖轮询即可。
 	 */
 	private String callbackUrl = "";
 

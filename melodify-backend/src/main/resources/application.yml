@@ -49,4 +49,5 @@ melodify:
     poll-interval-ms: 15000
     max-wait-ms: 600000
     callback-url: ""
+    # POST /generate 必填 callBackUrl；不配时 Runner 会使用 https://example.invalid/... 占位（仅合规，不靠回调）
     default-model: V4_5
