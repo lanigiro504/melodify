@@ -3,12 +3,14 @@ package com.melodify.service.impl;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.melodify.common.exception.BizException;
+import com.melodify.config.MelodifyUserProperties;
 import com.melodify.entity.SysUser;
 import com.melodify.mapper.SysUserMapper;
 import com.melodify.model.dto.UserLoginDTO;
 import com.melodify.model.dto.UserProfileDTO;
 import com.melodify.model.dto.UserRegisterDTO;
 import com.melodify.service.SysUserService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,7 +24,10 @@ import java.nio.charset.StandardCharsets;
  * <p>密码当前为兼容性 MD5，后续可与安全框架 {@code PasswordEncoder} 对齐并增加盐值。</p>
  */
 @Service
+@RequiredArgsConstructor
 public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> implements SysUserService {
+
+	private final MelodifyUserProperties melodifyUserProperties;
 
 	private static final long DEFAULT_ROLE_ID = 2L;
 	private static final int DEFAULT_STATUS_NORMAL = 1;
@@ -51,7 +56,8 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
 		user.setPassword(DigestUtils.md5DigestAsHex(rawPassword.getBytes(StandardCharsets.UTF_8)));
 		user.setRoleId(DEFAULT_ROLE_ID);
 		user.setStatus(DEFAULT_STATUS_NORMAL);
-		user.setPoints(0);
+		// 首登即 0 会导致「单次扣费 generate-cost-points」永远无法通过，故注册赠送可配置额度
+		user.setPoints(Math.max(0, melodifyUserProperties.getSignupBonusPoints()));
 		user.setAvatar("");
 		user.setEmail("");
 		user.setPhone("");

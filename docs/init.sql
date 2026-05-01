@@ -129,4 +129,7 @@ CREATE TABLE `point_log` (
 -- 以下为「已有库增量」备忘：若在增加 vendor_task_id 字段前已初始化过库，按需执行：
 -- ALTER TABLE `music_task` ADD COLUMN `vendor_task_id` varchar(128) DEFAULT NULL COMMENT '第三方任务号（SunoAPI 等）' AFTER `task_id`;
 -- ALTER TABLE `music_task` ADD KEY `idx_vendor_task_id` (`vendor_task_id`);
+--
+-- 老账号若仍为 points=0 且从未充值，可自行补足体验分以便通过「生成扣积分」校验（按需执行）：
+-- UPDATE sys_user SET points = 300 WHERE COALESCE(points, 0) = 0 AND is_deleted = 0;
 -- ---------------------------------------------------------------------------
