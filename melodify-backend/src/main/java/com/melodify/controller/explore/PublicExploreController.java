@@ -17,10 +17,14 @@ public class PublicExploreController {
 
 	private final PublicExploreService publicExploreService;
 
+	private static final long MAX_PAGE_SIZE = 48;
+
 	@GetMapping("/assets")
 	public Result<IPage<MusicExploreItemVO>> assets(
 			@RequestParam(defaultValue = "1") long current,
 			@RequestParam(defaultValue = "12") long size) {
-		return Result.success(publicExploreService.pagePublicAssets(current, size));
+		long page = Math.max(1, current);
+		long pageSize = Math.min(Math.max(1, size), MAX_PAGE_SIZE);
+		return Result.success(publicExploreService.pagePublicAssets(page, pageSize));
 	}
 }

@@ -1,6 +1,7 @@
 package com.melodify.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.melodify.entity.MusicAsset;
@@ -10,7 +11,7 @@ import com.melodify.model.vo.MusicExploreItemVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -30,18 +31,45 @@ public class PublicExploreService {
 				.eq(MusicAsset::getStatus, 1)
 				.orderByDesc(MusicAsset::getCreateTime);
 		Page<MusicAsset> raw = musicAssetService.page(new Page<>(current, size), wrapper);
+		List<MusicAsset> assets = raw.getRecords();
 
-		Set<Long> taskPks = raw.getRecords().stream().map(MusicAsset::getTaskId).collect(Collectors.toSet());
-		Map<Long, MusicTask> taskMap = taskPks.isEmpty()
-				? Map.of()
-				: musicTaskService.listByIds(taskPks).stream().collect(Collectors.toMap(MusicTask::getId, t -> t));
-		List<MusicExploreItemVO> rows = new ArrayList<>(raw.getRecords().size());
-		for (MusicAsset a : raw.getRecords()) {
-			long likes = musicLikeService.lambdaQuery().eq(MusicLike::getAssetId, a.getId()).count();
-			rows.add(MusicExploreItemVO.of(a, taskMap.get(a.getTaskId()), likes));
-		}
+		Map<Long, MusicTask> taskByPk = loadTasks(assets);
+		Map<Long, Long> likesByAsset = countLikes(assets);
+
+		List<MusicExploreItemVO> rows = assets.stream()
+				.map(a -> MusicExploreItemVO.of(a, taskByPk.get(a.getTaskId()),
+						likesByAsset.getOrDefault(a.getId(), 0L)))
+				.toList();
+
 		Page<MusicExploreItemVO> out = new Page<>(raw.getCurrent(), raw.getSize(), raw.getTotal());
 		out.setRecords(rows);
+		return out;
+	}
+
+	private Map<Long, MusicTask> loadTasks(List<MusicAsset> assets) {
+		Set<Long> taskPks = assets.stream().map(MusicAsset::getTaskId).collect(Collectors.toSet());
+		if (taskPks.isEmpty()) {
+			return Map.of();
+		}
+		return musicTaskService.listByIds(taskPks).stream()
+				.collect(Collectors.toMap(MusicTask::getId, t -> t));
+	}
+
+	/** 当前页资产 id 一次 GROUP BY 统计点赞，避免逐条 count */
+	private Map<Long, Long> countLikes(List<MusicAsset> assets) {
+		List<Long> assetIds = assets.stream().map(MusicAsset::getId).toList();
+		if (assetIds.isEmpty()) {
+			return Map.of();
+		}
+		QueryWrapper<MusicLike> qw = new QueryWrapper<MusicLike>()
+				.select("asset_id", "count(1) AS cnt")
+				.in("asset_id", assetIds)
+				.groupBy("asset_id");
+		Map<Long, Long> out = new HashMap<>();
+		for (Map<String, Object> row : musicLikeService.getBaseMapper().selectMaps(qw)) {
+			long assetId = ((Number) row.get("asset_id")).longValue();
+			out.put(assetId, ((Number) row.get("cnt")).longValue());
+		}
 		return out;
 	}
 }
