@@ -1,0 +1,19 @@
+# =============================================================================
+# 本地联调 Suno（本文件可安全提交；密钥请放在 application-local.yml，见项目 .gitignore）
+#
+# 【推荐】不落盘密钥——仅环境变量（PowerShell）：
+#   $env:SUNO_API_KEY = "你的密钥"
+#   $env:MELODIFY_MUSIC_GENERATION_PROVIDER = "suno"
+#   mvn spring-boot:run
+#
+# 【或】复制本文件为 application-local.yml，填入 api-key，启动时启用 profile：
+#   copy application-local.example.yml application-local.yml   （按需编辑）
+#   mvn spring-boot:run -Dspring-boot.run.arguments="--spring.profiles.active=local"
+#
+# 创作页只调本平台 /api ，Bearer 只应在后端请求 Suno；不要把密钥写进 melodify-client。
+# =============================================================================
+melodify:
+  music-generation:
+    provider: suno
+  suno:
+    api-key: "在此填写 Suno API Key"

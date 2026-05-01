@@ -42,9 +42,11 @@ melodify:
     simulate-delay-ms: 2500
     placeholder-audio-url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
     # simulated=仅占位；suno=调 api.sunoapi.org（需配置下方 api-key）
+    # 本机联调：可用环境变量 MELODIFY_MUSIC_GENERATION_PROVIDER=suno，或见 application-local.example.yml
     provider: simulated
   suno:
     api-base-url: https://api.sunoapi.org/api/v1
+    # 优先环境变量 SUNO_API_KEY；也可在已忽略的 application-local.yml 中写 api-key
     api-key: ${SUNO_API_KEY:}
     poll-interval-ms: 15000
     max-wait-ms: 600000

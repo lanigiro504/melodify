@@ -167,7 +167,11 @@ const onSubmit = async () => {
 
 const hint =
   import.meta.env.DEV ?
-    `开发环境请将后端 provider 设为 suno 且配置 SUNO_API_KEY（见 application.yml）；未配置时使用本地占位音频。`
+    [
+      '真机走 Suno：后端设 SUNO_API_KEY，并设 MELODIFY_MUSIC_GENERATION_PROVIDER=suno；',
+      '或复制 melodify-backend/src/main/resources/application-local.example.yml 为 application-local.yml 并启用 --spring.profiles.active=local（该文件已 .gitignore）。',
+      '密钥勿写进前端仓库。',
+    ].join('')
   : ''
 </script>
 

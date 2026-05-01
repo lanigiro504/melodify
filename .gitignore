@@ -6,3 +6,7 @@ target/
 .vscode/
 *.log
 .DS_Store
+
+# 本地 Suno 密钥与联调覆盖（勿提交远程）
+melodify-backend/src/main/resources/application-local.yml
+melodify-backend/.env
