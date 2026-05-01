@@ -1,10 +1,10 @@
 <script setup lang="ts">
 /**
- * 首页：产品主入口、公开作品预览、核心能力说明；已登录时提供创作/作品库快捷入口。
+ * 首页：轻量产品介绍 + 作品广场（社区）为主，减少重复信息密度。
  */
 import { ElMessage } from 'element-plus'
 import { storeToRefs } from 'pinia'
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { pageExploreAssets, type ExploreAssetItem } from '@/api/explore'
 import { useAuthStore } from '@/stores/auth'
@@ -22,12 +22,21 @@ const { isAuthenticated, displayName } = storeToRefs(auth)
 
 const previewLoading = ref(false)
 const previewRows = ref<ExploreAssetItem[]>([])
+const exploreTotal = ref(0)
+
+const communityStatsLine = computed(() => {
+  if (previewLoading.value) return '加载社区作品…'
+  const n = exploreTotal.value
+  if (n <= 0) return '成为第一个把作品公开到广场的创作者吧'
+  return `共 ${n} 首公开作品 · 访客可直接试听`
+})
 
 const fetchPreview = async () => {
   previewLoading.value = true
   try {
-    const page = unwrapResult(await pageExploreAssets(1, 6))
+    const page = unwrapResult(await pageExploreAssets(1, 10))
     previewRows.value = page.records
+    exploreTotal.value = page.total
   } catch (e) {
     showSubmitError(e, '加载广场预览失败')
   } finally {
@@ -71,120 +80,114 @@ onMounted(() => void fetchPreview())
   <div class="home">
     <section class="hero melodify-glass-card">
       <div class="hero__copy">
-        <p class="page-eyebrow hero__eyebrow">Text to Music · AI Studio</p>
-        <h1 class="page-title page-title--xl hero__title">把灵感变成可以试听的完整歌曲</h1>
+        <p class="page-eyebrow hero__eyebrow">Melodify · AI Music</p>
+        <h1 class="page-title page-title--xl hero__title">创作音乐，也在社区里被听见</h1>
         <p class="page-desc hero__lead">
-          输入创意或歌词描述，Melodify 对接生成管线、追踪任务并在作品库沉淀成品；广场上的公开作品无需登录即可试听。
+          一句话生成完整歌曲；若愿意，可把成品公开到<strong>作品广场</strong>，让更多人用同一套播放器即时试听。
         </p>
 
-        <div class="hero__primary-row">
+        <div class="hero__actions">
           <template v-if="!isAuthenticated">
-            <el-button type="primary" size="large" round @click="goRegister">免费开始创作</el-button>
-            <el-button size="large" round plain @click="goLogin">已有账号登录</el-button>
+            <el-button type="primary" size="large" round @click="goRegister">免费注册创作</el-button>
+            <el-button size="large" round plain @click="router.push('/explore')">先逛广场</el-button>
+            <el-button size="large" round text @click="goLogin">登录</el-button>
           </template>
           <template v-else>
             <p class="hero__greeting">
-              欢迎回来，<strong>{{ displayName }}</strong>
+              <span class="hero__hi">你好，{{ displayName }}</span>
             </p>
             <div class="hero__quick">
-              <el-button type="primary" size="large" round @click="router.push('/generate')">继续创作</el-button>
-              <el-button size="large" round @click="router.push('/works')">作品库</el-button>
+              <el-button type="primary" size="large" round @click="router.push('/generate')">创作</el-button>
+              <el-button size="large" round @click="router.push('/explore')">广场</el-button>
+              <el-button size="large" round plain @click="router.push('/works')">作品库</el-button>
             </div>
           </template>
         </div>
 
-        <div class="hero__secondary-row">
-          <RouterLink class="hero__text-link" to="/explore">逛逛作品广场</RouterLink>
-          <span class="hero__sep" aria-hidden="true">·</span>
-          <RouterLink class="hero__text-link" to="/about">了解 Melodify</RouterLink>
-          <template v-if="isAuthenticated">
-            <span class="hero__sep" aria-hidden="true">·</span>
-            <RouterLink class="hero__text-link" to="/recharge">积分充值</RouterLink>
-          </template>
-        </div>
-      </div>
-
-      <div class="hero__visual" aria-hidden="true">
-        <div class="player-card">
-          <div class="wave">
-            <span v-for="i in 18" :key="i" />
-          </div>
-          <p class="player-title">Dream Pop · 生成预览</p>
-          <div class="player-line">
-            <span />
-          </div>
-        </div>
+        <p class="hero__fineprint">
+          <RouterLink to="/about">产品说明</RouterLink>
+          <span aria-hidden="true"> · </span>
+          <RouterLink v-if="isAuthenticated" to="/recharge">积分</RouterLink>
+          <template v-if="isAuthenticated"><span aria-hidden="true"> · </span></template>
+          <RouterLink to="/explore">广场规则：公开作品对所有人可见</RouterLink>
+        </p>
       </div>
     </section>
 
-    <section class="preview-block">
-      <div class="preview-head">
-        <div>
-          <p class="page-eyebrow preview-eyebrow">Explore</p>
-          <h2 class="page-title page-title--lg preview-title">听听创作者公开分享的成品</h2>
-          <p class="page-desc preview-desc">点击下方卡片即可用底部播放器试听，与广场页使用同一套公开作品数据。</p>
+    <section class="community melodify-glass-card">
+      <header class="community__head">
+        <div class="community__titles block-start">
+          <p class="page-eyebrow community__eyebrow">社区</p>
+          <h2 class="page-title page-title--lg community__title">作品广场</h2>
+          <p class="community__stats">{{ communityStatsLine }}</p>
         </div>
-        <RouterLink class="preview-more" to="/explore">查看全部</RouterLink>
-      </div>
+        <div class="community__tools">
+          <el-button
+            type="primary"
+            round
+            :loading="previewLoading"
+            @click="router.push('/explore')"
+          >
+            进入广场
+          </el-button>
+          <el-button v-if="isAuthenticated" round plain @click="router.push('/works')">
+            我的作品与公开设置
+          </el-button>
+          <el-button round plain :loading="previewLoading" @click="fetchPreview">换一批预览</el-button>
+        </div>
+      </header>
 
-      <div v-loading="previewLoading" class="preview-grid">
+      <p class="community__howto">
+        在作品详情打开<strong>公开到广场</strong>，即可把成品分享给所有访客；访客点击卡片会通过底部播放器试听（与广场列表一致）。
+      </p>
+
+      <div v-loading="previewLoading" class="community__rail-wrap">
         <el-empty
           v-if="!previewRows.length && !previewLoading"
-          description="暂无公开作品，注册后去创作并打开「公开到广场」吧"
+          description="暂无人公开作品，去创作并打开「公开到广场」吧"
         />
 
-        <article
-          v-for="item in previewRows"
-          :key="item.id"
-          class="preview-card soft-card"
-        >
-          <div class="preview-cover">
-            <span>{{ (item.title || item.prompt || 'AI').slice(0, 2) }}</span>
-          </div>
-          <div class="preview-body">
-            <h3>{{ item.title?.trim() || '未命名' }}</h3>
-            <p class="preview-prompt">{{ item.prompt?.trim() || '—' }}</p>
-            <div class="preview-meta">
-              <span>{{ item.durationSec ?? 0 }} 秒</span>
-              <span>{{ item.likeCount }} 赞</span>
+        <div v-else class="community__rail">
+          <article
+            v-for="item in previewRows"
+            :key="item.id"
+            class="community-card soft-card"
+          >
+            <div class="community-card__cover">
+              <span>{{ (item.title || item.prompt || 'AI').slice(0, 2) }}</span>
             </div>
-            <el-button type="primary" round size="small" @click="onPlayPreview(item)">播放</el-button>
-          </div>
-        </article>
+            <div class="community-card__body">
+              <h3>{{ item.title?.trim() || '未命名' }}</h3>
+              <p class="community-card__hint">
+                {{ item.prompt?.trim() || '—' }}
+              </p>
+              <div class="community-card__meta">
+                <span>{{ item.durationSec ?? 0 }} 秒</span>
+                <span>·</span>
+                <span>{{ item.likeCount }} 赞</span>
+              </div>
+              <el-button type="primary" round size="small" @click="onPlayPreview(item)">
+                试听
+              </el-button>
+            </div>
+          </article>
+        </div>
       </div>
     </section>
 
-    <section class="section-grid section-grid--3 feature-grid">
-      <article class="feature-card soft-card">
-        <span class="feature-index">01</span>
-        <h2>简单与自定义</h2>
-        <p>一句话快速出 demo，或补充标题、风格与歌词做更细的控制，适配不同创作节奏。</p>
-      </article>
-      <article class="feature-card soft-card">
-        <span class="feature-index">02</span>
-        <h2>任务与作品库</h2>
-        <p>生成中、成功与失败状态集中展示，试听与复盘都留在作品库里，避免散落在各处。</p>
-      </article>
-      <article class="feature-card soft-card">
-        <span class="feature-index">03</span>
-        <h2>广场与播放器</h2>
-        <p>可选将成品公开到广场；全局迷你播放器支持展开查看歌词，试听路径一致。</p>
-      </article>
-    </section>
-
-    <section class="section-grid section-grid--3 cap-grid">
-      <article class="cap-card soft-card">
-        <h3>Suno 管线</h3>
-        <p>由后端统一提交与回调，前端只关心进度与结果。</p>
-      </article>
-      <article class="cap-card soft-card">
-        <h3>积分消费</h3>
-        <p>按任务扣减积分，充值与个人中心展示余额，成本可见。</p>
-      </article>
-      <article class="cap-card soft-card">
-        <h3>本地化试听</h3>
-        <p>音频可镜像存储并由本站下发，减少外链不稳定带来的影响。</p>
-      </article>
+    <section class="foot-strip" aria-label="更多">
+      <RouterLink class="foot-strip__link soft-card" to="/generate">
+        <span class="foot-strip__k">创作</span>
+        <span class="foot-strip__v">模型与歌词模式</span>
+      </RouterLink>
+      <RouterLink class="foot-strip__link soft-card" to="/explore">
+        <span class="foot-strip__k">广场</span>
+        <span class="foot-strip__v">只展示公开发布的作品</span>
+      </RouterLink>
+      <RouterLink class="foot-strip__link soft-card" to="/about">
+        <span class="foot-strip__k">帮助</span>
+        <span class="foot-strip__v">计费与能力说明</span>
+      </RouterLink>
     </section>
   </div>
 </template>
@@ -194,23 +197,12 @@ onMounted(() => void fetchPreview())
   padding-top: 0.25rem;
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 1.75rem;
+  padding-bottom: 0.5rem;
 }
 
 .hero {
-  position: relative;
-  overflow: hidden;
-  display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
-  align-items: center;
-  gap: 2rem;
-  padding: clamp(2rem, 6vw, 4.5rem);
-}
-
-.hero__copy,
-.hero__visual {
-  position: relative;
-  z-index: 1;
+  padding: clamp(1.5rem, 4vw, 2.75rem) clamp(1.25rem, 4vw, 2.25rem);
 }
 
 .hero__eyebrow {
@@ -222,263 +214,243 @@ onMounted(() => void fetchPreview())
 }
 
 .hero__title {
-  line-height: 1.02;
-  margin: 1rem 0 1.25rem;
+  line-height: 1.08;
+  margin: 0.85rem 0 0.75rem;
+  max-width: 20ch;
+}
+
+@media (min-width: 720px) {
+  .hero__title {
+    max-width: none;
+  }
 }
 
 .hero__lead {
-  font-size: 1.08rem;
-  max-width: 42rem;
-  margin: 0 0 1.5rem;
+  font-size: 1.05rem;
+  max-width: 38rem;
+  margin: 0 0 1.25rem;
+  line-height: 1.6;
 }
 
-.hero__primary-row {
+.hero__lead strong {
+  color: var(--el-color-primary);
+  font-weight: 800;
+}
+
+.hero__actions {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 1rem;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem 0.75rem;
+}
+
+.hero__greeting {
+  width: 100%;
+  margin: 0;
+}
+
+.hero__hi {
+  font-size: 1rem;
+  color: var(--melodify-muted);
 }
 
 .hero__quick {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
+  gap: 0.65rem;
 }
 
-.hero__greeting {
-  font-size: 1.125rem;
+.hero__fineprint {
+  margin: 1.15rem 0 0;
+  font-size: 0.82rem;
   color: var(--melodify-muted);
-  margin: 0;
+  line-height: 1.5;
 }
 
-.hero__secondary-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.35rem 0.5rem;
-  margin-top: 1.25rem;
-  font-size: 0.9375rem;
-}
-
-.hero__text-link {
+.hero__fineprint a {
   color: var(--el-color-primary);
   font-weight: 700;
   text-decoration: none;
 }
 
-.hero__text-link:hover {
+.hero__fineprint a:hover {
   text-decoration: underline;
 }
 
-.hero__sep {
-  color: var(--melodify-muted);
-  user-select: none;
+.community {
+  padding: 1.35rem clamp(1rem, 3vw, 1.5rem) 1.5rem;
 }
 
-.hero__visual {
-  display: flex;
-  justify-content: center;
-}
-
-.player-card {
-  width: min(100%, 25rem);
-  padding: 1.5rem;
-  border-radius: 2rem;
-  background: #f8fafc;
-  color: var(--melodify-strong);
-  border: 1px solid rgba(148, 163, 184, 0.16);
-  box-shadow: 0 14px 38px rgba(15, 23, 42, 0.06);
-}
-
-.wave {
-  height: 12rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.45rem;
-}
-
-.wave span {
-  width: 0.55rem;
-  height: calc(2.5rem + (var(--i, 1) * 0.2rem));
-  border-radius: 999px;
-  background: #6d5dfc;
-  opacity: 0.82;
-}
-
-.wave span:nth-child(3n) {
-  height: 8rem;
-}
-
-.wave span:nth-child(4n) {
-  height: 5.5rem;
-}
-
-.wave span:nth-child(5n) {
-  height: 10rem;
-}
-
-.player-title {
-  margin: 0.5rem 0 1rem;
-  font-weight: 800;
-}
-
-.player-line {
-  height: 0.55rem;
-  border-radius: 999px;
-  background: #e2e8f0;
-}
-
-.player-line span {
-  display: block;
-  width: 62%;
-  height: 100%;
-  border-radius: inherit;
-  background: #6d5dfc;
-}
-
-.preview-block {
-  padding: 0.15rem 0;
-}
-
-.preview-head {
+.community__head {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 1.1rem;
+  gap: 1rem 1.25rem;
+  margin-bottom: 0.85rem;
 }
 
-.preview-eyebrow {
+.block-start {
+  min-width: min(100%, 18rem);
+}
+
+.community__eyebrow {
   margin-bottom: 0.35rem;
 }
 
-.preview-title {
+.community__title {
   margin: 0 0 0.35rem;
 }
 
-.preview-desc {
+.community__stats {
   margin: 0;
+  font-size: 0.94rem;
+  color: var(--melodify-muted);
   max-width: 36rem;
+  line-height: 1.5;
 }
 
-.preview-more {
-  flex-shrink: 0;
+.community__tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.community__howto {
+  margin: 0 0 1rem;
+  font-size: 0.88rem;
+  color: var(--melodify-muted);
+  line-height: 1.55;
+  max-width: 48rem;
+}
+
+.community__howto strong {
+  color: var(--melodify-strong);
   font-weight: 800;
-  color: var(--el-color-primary);
-  text-decoration: none;
-  padding: 0.5rem 0;
 }
 
-.preview-more:hover {
-  text-decoration: underline;
+.community__rail-wrap {
+  min-height: 3rem;
 }
 
-.preview-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+.community__rail {
+  display: flex;
   gap: 1rem;
-  min-height: 4rem;
+  overflow-x: auto;
+  padding: 0.2rem 0.15rem 0.6rem;
+  margin: 0 -0.15rem;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: thin;
 }
 
-.preview-card {
+.community__rail::-webkit-scrollbar {
+  height: 6px;
+}
+
+.community__rail::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.45);
+  border-radius: 999px;
+}
+
+.community-card {
+  flex: 0 0 min(17.5rem, calc(100vw - 4.5rem));
+  scroll-snap-align: start;
   display: grid;
-  grid-template-columns: 4.5rem minmax(0, 1fr);
-  gap: 0.85rem;
-  padding: 1rem;
+  grid-template-columns: 4.75rem minmax(0, 1fr);
+  gap: 1rem;
+  padding: 1rem 1.05rem;
+  border-radius: 1.15rem;
+  transition:
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
 }
 
-.preview-cover {
-  width: 4.5rem;
-  height: 4.5rem;
-  border-radius: 1rem;
+.community-card:hover {
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.07);
+  border-color: rgba(99, 102, 241, 0.22);
+}
+
+.community-card__cover {
+  width: 4.75rem;
+  height: 4.75rem;
+  border-radius: 1.05rem;
   display: grid;
   place-items: center;
-  background: #f5f3ff;
+  background: linear-gradient(145deg, #f5f3ff, #eef2ff);
   color: #6d5dfc;
   font-weight: 900;
-  font-size: 1rem;
+  border: 1px solid rgba(99, 102, 241, 0.12);
 }
 
-.preview-body h3 {
+.community-card__body h3 {
   margin: 0 0 0.35rem;
   font-size: 1rem;
-  font-weight: 800;
+  font-weight: 900;
   color: var(--melodify-strong);
+  line-height: 1.25;
 }
 
-.preview-prompt {
-  margin: 0 0 0.5rem;
+.community-card__hint {
+  margin: 0 0 0.45rem;
   font-size: 0.82rem;
   color: var(--melodify-muted);
-  line-height: 1.5;
+  line-height: 1.45;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
-.preview-meta {
+.community-card__meta {
   display: flex;
-  gap: 0.65rem;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
   font-size: 0.78rem;
   color: var(--melodify-muted);
-  margin-bottom: 0.6rem;
+  margin-bottom: 0.55rem;
 }
 
-.feature-grid {
-  margin-top: 0;
+.foot-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
 }
 
-.feature-card {
-  padding: 1.35rem;
-}
-
-.feature-index {
-  color: var(--el-color-primary);
-  font-weight: 900;
-  font-size: 0.82rem;
-}
-
-.feature-card h2 {
-  margin: 0.45rem 0 0.45rem;
-  color: var(--melodify-strong);
-  font-size: 1.05rem;
-  font-weight: 800;
-}
-
-.feature-card p {
-  color: var(--melodify-muted);
-  line-height: 1.7;
-  margin: 0;
-}
-
-.cap-grid {
-  margin-top: 0;
-}
-
-.cap-card {
-  padding: 1.15rem 1.25rem;
-}
-
-.cap-card h3 {
-  margin: 0 0 0.45rem;
-  font-size: 0.98rem;
-  font-weight: 800;
-  color: var(--melodify-strong);
-}
-
-.cap-card p {
-  margin: 0;
-  font-size: 0.9rem;
-  color: var(--melodify-muted);
-  line-height: 1.65;
-}
-
-@media (max-width: 860px) {
-  .hero {
+@media (max-width: 720px) {
+  .foot-strip {
     grid-template-columns: 1fr;
   }
+}
+
+.foot-strip__link {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 1rem 1.1rem;
+  border-radius: 1rem;
+  text-decoration: none;
+  color: inherit;
+  transition:
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.foot-strip__link:hover {
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+  border-color: rgba(99, 102, 241, 0.2);
+}
+
+.foot-strip__k {
+  font-weight: 900;
+  font-size: 0.95rem;
+  color: var(--melodify-strong);
+}
+
+.foot-strip__v {
+  font-size: 0.82rem;
+  color: var(--melodify-muted);
+  line-height: 1.45;
 }
 </style>
