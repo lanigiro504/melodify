@@ -165,53 +165,74 @@ async function openDetail(task: MusicTask) {
           </div>
 
           <div class="work-main">
-            <div class="work-title-row">
-              <div>
-                <h2>{{ shorten(row.prompt || '未命名作品', 30) }}</h2>
-                <p>{{ row.createTime || '—' }}</p>
+            <div class="work-body">
+              <div class="work-title-row">
+                <div>
+                  <h2>{{ shorten(row.prompt || '未命名作品', 30) }}</h2>
+                  <p class="time-line">{{ row.createTime || '—' }}</p>
+                </div>
+                <el-tag round size="small" effect="plain" :type="statusClass(row.status)">
+                  {{ musicTaskStatusText(row.status ?? undefined) }}
+                </el-tag>
               </div>
-              <el-tag round :type="statusClass(row.status)">
-                {{ musicTaskStatusText(row.status ?? undefined) }}
-              </el-tag>
+
+              <p class="prompt-text">{{ shorten(row.prompt ?? '暂无提示词', 120) }}</p>
+
+              <div class="meta-row">
+                <div class="meta-facts">
+                  <span class="meta-pair"><span class="meta-label">模型</span>{{ row.modelCode || '—' }}</span>
+                  <span aria-hidden="true" class="meta-dot">·</span>
+                  <span class="meta-pair"><span class="meta-label">消耗</span>{{ row.costPoints ?? '—' }} 积分</span>
+                </div>
+                <div class="meta-actions">
+                  <button type="button" @click="copyBizId(row.taskId)">复制任务号</button>
+                  <button
+                    v-if="row.status === MUSIC_TASK_STATUS.SUCCEEDED"
+                    type="button"
+                    @click="openDetail(row)"
+                  >
+                    查看详情
+                  </button>
+                </div>
+              </div>
             </div>
 
-            <p class="prompt-text">{{ shorten(row.prompt ?? '暂无提示词', 120) }}</p>
+            <div class="work-footer">
+              <template v-if="row.status === MUSIC_TASK_STATUS.SUCCEEDED">
+                <div class="audio-row">
+                  <audio
+                    v-if="previewUrls[row.taskId]"
+                    controls
+                    class="preview-audio"
+                    preload="none"
+                    :src="previewUrls[row.taskId]"
+                  />
+                  <el-button
+                    v-else
+                    type="primary"
+                    round
+                    size="small"
+                    :loading="!!fetchingAudio[row.taskId]"
+                    @click="loadPreview(row)"
+                  >
+                    加载试听
+                  </el-button>
+                </div>
+              </template>
 
-            <div class="meta-row">
-              <span>模型 {{ row.modelCode || '—' }}</span>
-              <span>消耗 {{ row.costPoints ?? '—' }} 积分</span>
-              <button type="button" @click="copyBizId(row.taskId)">复制任务号</button>
-              <button
-                v-if="row.status === MUSIC_TASK_STATUS.SUCCEEDED"
-                type="button"
-                @click="openDetail(row)"
+              <p v-else-if="row.status === MUSIC_TASK_STATUS.FAILED" class="err-cell">
+                {{ [row.errorCode, row.errorMessage].filter(Boolean).join(': ') || '未知失败原因' }}
+              </p>
+
+              <p
+                v-else-if="
+                  row.status === MUSIC_TASK_STATUS.QUEUED || row.status === MUSIC_TASK_STATUS.GENERATING
+                "
+                class="work-footer-hint"
               >
-                查看详情
-              </button>
+                生成完成后将显示试听与播放控制。
+              </p>
             </div>
-
-            <div v-if="row.status === MUSIC_TASK_STATUS.SUCCEEDED" class="audio-row">
-              <audio
-                v-if="previewUrls[row.taskId]"
-                controls
-                class="preview-audio"
-                preload="none"
-                :src="previewUrls[row.taskId]"
-              />
-              <el-button
-                v-else
-                type="primary"
-                round
-                :loading="!!fetchingAudio[row.taskId]"
-                @click="loadPreview(row)"
-              >
-                加载试听
-              </el-button>
-            </div>
-
-            <p v-if="row.status === MUSIC_TASK_STATUS.FAILED" class="err-cell">
-              {{ [row.errorCode, row.errorMessage].filter(Boolean).join(': ') || '未知失败原因' }}
-            </p>
           </div>
         </article>
       </div>
@@ -284,28 +305,47 @@ async function openDetail(task: MusicTask) {
 .work-list {
   display: flex;
   flex-direction: column;
-  gap: 0.9rem;
+  gap: 0;
+  border-radius: 1.1rem;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: #ffffff;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
 .work-item {
   display: grid;
   grid-template-columns: 5rem minmax(0, 1fr);
-  gap: 1rem;
-  padding: 1rem;
-  border: 1px solid rgba(148, 163, 184, 0.14);
-  border-radius: 1.35rem;
-  background: #ffffff;
+  gap: 1.1rem;
+  align-items: start;
+  padding: 1.2rem 1.15rem;
+  border-radius: 0;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+  transition: background-color 0.15s ease;
+}
+
+.work-item:last-of-type {
+  border-bottom: none;
+}
+
+.work-item:hover {
+  background-color: rgba(248, 250, 252, 0.85);
 }
 
 .cover {
   width: 5rem;
   height: 5rem;
+  flex: none;
   display: grid;
   place-items: center;
-  border-radius: 1.25rem;
+  border-radius: 1.1rem;
   color: #6d5dfc;
   background: #f5f3ff;
-  box-shadow: inset 0 0 0 1px rgba(109, 93, 252, 0.12);
+  box-shadow:
+    inset 0 0 0 1px rgba(109, 93, 252, 0.12),
+    0 1px 3px rgba(15, 23, 42, 0.04);
 }
 
 .cover span {
@@ -327,6 +367,20 @@ async function openDetail(task: MusicTask) {
   background: #fff1f2;
 }
 
+.work-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  flex: 1;
+}
+
+.work-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
 .work-title-row {
   display: flex;
   align-items: flex-start;
@@ -337,29 +391,64 @@ async function openDetail(task: MusicTask) {
 .work-title-row h2 {
   margin: 0;
   color: var(--melodify-strong);
-  font-size: 1.08rem;
-  font-weight: 900;
+  font-size: 1.05rem;
+  font-weight: 800;
+  line-height: 1.35;
+  letter-spacing: -0.02em;
 }
 
-.work-title-row p {
-  margin-top: 0.2rem;
+.time-line {
+  margin: 0.35rem 0 0;
   color: var(--melodify-muted);
-  font-size: 0.85rem;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
 }
 
 .prompt-text {
-  margin: 0.75rem 0;
+  margin: 0.65rem 0 0;
   color: var(--melodify-muted);
-  line-height: 1.65;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  opacity: 0.95;
 }
 
 .meta-row {
+  margin-top: 0.95rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  color: var(--melodify-muted);
+  font-size: 0.8125rem;
+}
+
+.meta-facts {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 0.6rem 0.9rem;
-  color: var(--melodify-muted);
-  font-size: 0.86rem;
+  gap: 0 0.35rem;
+  row-gap: 0.25rem;
+}
+
+.meta-pair .meta-label {
+  margin-right: 0.2rem;
+  color: rgb(148, 163, 184);
+  font-weight: 500;
+}
+
+.meta-dot {
+  color: rgb(203, 213, 225);
+  user-select: none;
+  padding: 0 0.08rem;
+}
+
+.meta-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
 }
 
 .meta-row button {
@@ -367,27 +456,53 @@ async function openDetail(task: MusicTask) {
   background: transparent;
   color: var(--el-color-primary);
   font: inherit;
-  font-weight: 800;
+  font-size: inherit;
+  font-weight: 700;
   cursor: pointer;
   padding: 0;
 }
 
+.meta-row button:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.work-footer {
+  margin-top: auto;
+  padding-top: 0.95rem;
+  margin-inline: 0;
+  border-top: 1px solid rgba(226, 232, 240, 0.9);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 2.75rem;
+}
+
+.work-footer-hint {
+  margin: 0;
+  color: var(--melodify-muted);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
 .audio-row {
-  margin-top: 0.85rem;
+  margin: 0;
 }
 
 .preview-audio {
   width: 100%;
-  max-width: 32rem;
+  max-width: min(34rem, 100%);
   vertical-align: middle;
 }
 
 .err-cell {
+  margin: 0;
+  padding: 0.35rem 0 0;
   color: var(--el-color-danger);
-  font-size: 0.875rem;
-  margin: 0.85rem 0 0;
+  font-size: 0.8325rem;
+  line-height: 1.5;
 }
-
 .pager-wrap {
   display: flex;
   justify-content: flex-end;
