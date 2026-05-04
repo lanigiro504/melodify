@@ -2,11 +2,11 @@ import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteLocationNormalized } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { safeInternalPath } from '@/utils/redirect'
+import { composeClientDocumentTitle } from './routeTitle'
 
 /** 路由说明：
  * - meta.requiresAuth：需登录
  */
-const SITE_TITLE_FALLBACK = 'Melodify · AI 音乐'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -95,11 +95,9 @@ router.beforeEach(async (to: RouteLocationNormalized) => {
 })
 
 router.afterEach((to) => {
-  if (typeof window !== 'undefined') {
-    window.scrollTo(0, 0)
-    const segment = typeof to.meta.title === 'string' && to.meta.title.trim() ? to.meta.title.trim() : ''
-    document.title = segment ? `${segment} · Melodify` : SITE_TITLE_FALLBACK
-  }
+  if (typeof window === 'undefined') return
+  window.scrollTo({ top: 0, behavior: 'auto' })
+  document.title = composeClientDocumentTitle(to)
 })
 
 export default router

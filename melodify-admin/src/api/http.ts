@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { clearAdminCredentialStorage, getStoredToken } from '@/utils/sessionCredentials'
+import { getStoredToken } from '@/utils/sessionCredentials'
 import { SilentSessionRedirect } from '@/utils/httpSilent'
 
 export const getAuthorizationHeader = (): Record<string, string> => {
@@ -37,7 +37,9 @@ http.interceptors.response.use(
       typeof (d as { code: unknown }).code === 'number' &&
       (d as { code: number }).code === 401
     ) {
-      clearAdminCredentialStorage()
+      void import('@/stores/adminAuth').then(({ useAdminAuthStore }) => {
+        useAdminAuthStore().logout()
+      })
       void import('@/router').then(({ default: r }) => {
         if (r.currentRoute.value.path !== '/login') {
           void r.replace({ path: '/login', query: { redirect: r.currentRoute.value.fullPath } })
