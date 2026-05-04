@@ -1,33 +1,19 @@
 <script setup lang="ts">
-import {
-  Coin,
-  Cpu,
-  FolderOpened,
-  Goods,
-  Key,
-  Menu as IconMenu,
-  Postcard,
-  Sell,
-  UserFilled,
-} from '@element-plus/icons-vue'
+import { Menu as IconMenu } from '@element-plus/icons-vue'
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { adminNavSections, adminSubmenuDefaultOpenIndexes } from '@/router/adminNavConfig'
+import { resolveMatchedPageTitle } from '@/router/routeTitle'
 import { useAdminAuthStore } from '@/stores/adminAuth'
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAdminAuthStore()
 
-const active = computed(() => route.path)
+const activePath = computed(() => route.path)
+const hdrTitle = computed(() => resolveMatchedPageTitle(route))
 
-const hdrTitle = computed(() => {
-  const matched = route.matched
-  for (let i = matched.length - 1; i >= 0; i--) {
-    const t = matched[i]?.meta?.title
-    if (typeof t === 'string' && t.trim()) return t.trim()
-  }
-  return '工作台'
-})
+const submenuOpenDefaults = adminSubmenuDefaultOpenIndexes()
 
 const handleLogout = () => {
   auth.logout()
@@ -46,48 +32,30 @@ const handleLogout = () => {
         </div>
       </div>
       <el-menu
-        :default-active="active"
-        :default-openeds="['ops']"
+        :default-active="activePath"
+        :default-openeds="submenuOpenDefaults"
         router
         class="menu"
         background-color="transparent"
         text-color="#b8c0d4"
         active-text-color="#f1f5f9"
       >
-        <el-menu-item index="/users">
-          <el-icon><UserFilled /></el-icon>
-          <span>用户管理</span>
-        </el-menu-item>
-        <el-menu-item index="/roles">
-          <el-icon><Key /></el-icon>
-          <span>角色管理</span>
-        </el-menu-item>
-        <el-sub-menu index="ops">
-          <template #title>
-            <el-icon><Postcard /></el-icon>
-            <span>运营管理</span>
-          </template>
-          <el-menu-item index="/tasks">
-            <el-icon><Cpu /></el-icon>
-            <span>生成任务</span>
+        <template v-for="section in adminNavSections" :key="section.type === 'item' ? section.leaf.path : section.index">
+          <el-menu-item v-if="section.type === 'item'" :index="`/${section.leaf.path}`">
+            <el-icon><component :is="section.leaf.icon" /></el-icon>
+            <span>{{ section.leaf.title }}</span>
           </el-menu-item>
-          <el-menu-item index="/assets">
-            <el-icon><FolderOpened /></el-icon>
-            <span>成品资产</span>
-          </el-menu-item>
-          <el-menu-item index="/point-logs">
-            <el-icon><Coin /></el-icon>
-            <span>积分流水</span>
-          </el-menu-item>
-          <el-menu-item index="/recharge-orders">
-            <el-icon><Sell /></el-icon>
-            <span>充值订单</span>
-          </el-menu-item>
-          <el-menu-item index="/point-products">
-            <el-icon><Goods /></el-icon>
-            <span>积分商品</span>
-          </el-menu-item>
-        </el-sub-menu>
+          <el-sub-menu v-else :index="section.index">
+            <template #title>
+              <el-icon><component :is="section.icon" /></el-icon>
+              <span>{{ section.title }}</span>
+            </template>
+            <el-menu-item v-for="c in section.children" :key="c.path" :index="`/${c.path}`">
+              <el-icon><component :is="c.icon" /></el-icon>
+              <span>{{ c.title }}</span>
+            </el-menu-item>
+          </el-sub-menu>
+        </template>
       </el-menu>
     </el-aside>
     <el-container>

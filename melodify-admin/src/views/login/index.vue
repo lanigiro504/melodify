@@ -3,6 +3,7 @@ import { Lock, User } from '@element-plus/icons-vue'
 import { reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAdminAuthStore } from '@/stores/adminAuth'
+import { safeInternalPath } from '@/utils/safeInternalPath'
 import { showSubmitError } from '@/utils/showSubmitError'
 
 const auth = useAdminAuthStore()
@@ -24,8 +25,7 @@ const onSubmit = async () => {
   loading.value = true
   try {
     await auth.login(u, p)
-    const redir = typeof route.query.redirect === 'string' ? route.query.redirect : ''
-    await router.replace(redir && redir.startsWith('/') ? redir : '/')
+    await router.replace(safeInternalPath(route.query.redirect))
   } catch (e) {
     showSubmitError(e, '登录失败')
   } finally {
