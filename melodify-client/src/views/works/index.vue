@@ -10,6 +10,7 @@ import { pageMusicTasks } from '@/api/musicTasks'
 import type { MusicTask } from '@/types/musicTask'
 import { MUSIC_TASK_STATUS, musicTaskStatusText } from '@/types/musicTask'
 import { unwrapResult } from '@/utils/apiResult'
+import { formatDateTimeZh } from '@/utils/formatDateTime'
 import { showSubmitError } from '@/utils/showSubmitError'
 
 defineOptions({ name: 'WorksPage' })
@@ -167,11 +168,16 @@ async function openDetail(task: MusicTask) {
           <div class="work-main">
             <div class="work-body">
               <div class="work-title-row">
-                <div>
-                  <h2>{{ shorten(row.prompt || '未命名作品', 30) }}</h2>
-                  <p class="time-line">{{ row.createTime || '—' }}</p>
+                <div class="title-stack">
+                  <h2>{{ shorten(row.prompt || '未命名作品', 36) }}</h2>
+                  <div class="time-row">
+                    <span class="time-label">创建于</span>
+                    <time :datetime="row.createTime ?? undefined" class="time-value">
+                      {{ formatDateTimeZh(row.createTime) }}
+                    </time>
+                  </div>
                 </div>
-                <el-tag round size="small" effect="plain" :type="statusClass(row.status)">
+                <el-tag round size="small" effect="plain" class="status-tag" :type="statusClass(row.status)">
                   {{ musicTaskStatusText(row.status ?? undefined) }}
                 </el-tag>
               </div>
@@ -378,43 +384,72 @@ async function openDetail(task: MusicTask) {
 .work-body {
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 1rem;
+  min-width: 0;
 }
 
 .work-title-row {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0.875rem;
+}
+
+.title-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
 }
 
 .work-title-row h2 {
   margin: 0;
   color: var(--melodify-strong);
-  font-size: 1.05rem;
+  font-size: 1.06rem;
   font-weight: 800;
-  line-height: 1.35;
+  line-height: 1.42;
   letter-spacing: -0.02em;
 }
 
-.time-line {
-  margin: 0.35rem 0 0;
-  color: var(--melodify-muted);
-  font-size: 0.8rem;
+.time-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.time-label {
+  flex: none;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: rgb(148, 163, 184);
+  letter-spacing: 0.06em;
+}
+
+.time-value {
+  font-size: 0.8325rem;
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.04em;
+  color: rgb(100, 116, 139);
+  word-break: keep-all;
+}
+
+.status-tag {
+  flex-shrink: 0;
+  margin-top: 0.125rem;
 }
 
 .prompt-text {
-  margin: 0.65rem 0 0;
+  margin: 0;
+  padding-left: 0.65rem;
+  border-left: 3px solid rgba(109, 93, 252, 0.22);
   color: var(--melodify-muted);
   font-size: 0.875rem;
-  line-height: 1.6;
-  opacity: 0.95;
+  line-height: 1.72;
 }
 
 .meta-row {
-  margin-top: 0.95rem;
+  margin-top: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
