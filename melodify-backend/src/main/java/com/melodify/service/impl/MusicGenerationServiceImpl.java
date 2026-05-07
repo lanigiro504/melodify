@@ -40,6 +40,10 @@ public class MusicGenerationServiceImpl implements MusicGenerationService {
 	private final MusicGenerationAsyncCoordinator musicGenerationAsyncCoordinator;
 	private final MusicGenerationProperties musicGenerationProperties;
 
+	/**
+	 * 1) 原子扣积分（单行 UPDATE points &gt;= cost）并写积分流水；2) 落库 GENERATING 任务；
+	 * 3) 注册 {@linkplain #registerAfterCommit}，仅在事务提交成功后再派发异步 Worker，避免出现「远端已接单但本地事务回滚」的不一致。
+	 */
 	@Override
 	@Transactional(rollbackFor = Exception.class)
 	public MusicGenerateSubmitVO submitGeneration(Long userId, MusicGenerateRequestDTO dto) {
@@ -109,14 +113,7 @@ public class MusicGenerationServiceImpl implements MusicGenerationService {
 		}
 	}
 
-	private static Map<String, Object> mergedParams(MusicGenerateRequestDTO dto) {
-		Map<String, Object> params = dto.getParams() == null ? new HashMap<>() : new HashMap<>(dto.getParams());
-		if (StringUtils.hasText(dto.getLyrics())) {
-			params.put("lyrics", dto.getLyrics().trim());
-		}
-		return params;
-	}
-
+	/** Spring 在提交阶段回调：早于此时执行异步会与未提交的事务并发读，故必须挂在 afterCommit。 */
 	private static void registerAfterCommit(Runnable runnable) {
 		TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
 			@Override
@@ -126,9 +123,21 @@ public class MusicGenerationServiceImpl implements MusicGenerationService {
 		});
 	}
 
+	private static Map<String, Object> mergedParams(MusicGenerateRequestDTO dto) {
+		Map<String, Object> params = dto.getParams() == null ? new HashMap<>() : new HashMap<>(dto.getParams());
+		if (StringUtils.hasText(dto.getLyrics())) {
+			params.put("lyrics", dto.getLyrics().trim());
+		}
+		return params;
+	}
+
 	static final class SysUserAtomicPoints {
 		private SysUserAtomicPoints() {}
 
+		/**
+		 * 用带条件的单行 UPDATE（points &gt;= cost）实现「够不够扣」，避免先读后写竞态；
+		 * 返回 false 表示余额不足或未更新到行。
+		 */
 		static boolean deductIfEnough(SysUserService sysUserService, Long userId, int cost) {
 			LambdaUpdateWrapper<SysUser> uw =
 					Wrappers.<SysUser>lambdaUpdate()

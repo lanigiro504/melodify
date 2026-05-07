@@ -43,6 +43,8 @@ public class SecurityConfig {
 						.permitAll()
 						.requestMatchers(HttpMethod.POST, "/api/callback/suno")
 						.permitAll()
+						.requestMatchers("/ws/**")
+						.permitAll()
 						.requestMatchers(HttpMethod.GET, "/api/public/**")
 						.permitAll()
 						.requestMatchers(HttpMethod.GET, "/api/media/audio/**")

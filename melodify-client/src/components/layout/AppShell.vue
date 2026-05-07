@@ -1,90 +1,40 @@
 <script setup lang="ts">
 /**
- * 主布局：产品化顶栏 + 背景装饰 + 个人资料抽屉。
+ * 主布局：产品化顶栏 + WebSocket 站内通知 + 个人中心独立页入口。
  */
-import type { FormInstance, FormRules } from 'element-plus'
 import { storeToRefs } from 'pinia'
-import { reactive, ref, watch } from 'vue'
+import { watch } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
+import NotificationBell from '@/components/layout/NotificationBell.vue'
 import MelodifyPlayer from '@/components/MelodifyPlayer.vue'
 import { useAuthStore } from '@/stores/auth'
-import { showSubmitError } from '@/utils/showSubmitError'
-import { validateFormRef } from '@/utils/validateFormRef'
+import { useRealtimeNotificationStore } from '@/stores/realtimeNotifications'
 
 defineOptions({ name: 'AppShell' })
 
 const router = useRouter()
 const auth = useAuthStore()
+const realtime = useRealtimeNotificationStore()
 const { currentUser, isAuthenticated, displayName, avatarText } = storeToRefs(auth)
 
-const profileVisible = ref(false)
-const profileRef = ref<FormInstance>()
-const savingProfile = ref(false)
-const refreshingProfile = ref(false)
-
-const profileForm = reactive({
-  nickname: '',
-  avatar: '',
-  email: '',
-  phone: '',
-})
-
-const profileRules: FormRules = {
-  nickname: [{ max: 50, message: '昵称最多 50 个字符', trigger: 'blur' }],
-  avatar: [{ max: 255, message: '头像地址最多 255 个字符', trigger: 'blur' }],
-  email: [{ max: 100, message: '邮箱最多 100 个字符', trigger: 'blur' }],
-  phone: [{ max: 20, message: '手机号最多 20 个字符', trigger: 'blur' }],
-}
-
 watch(
-  currentUser,
-  (user) => {
-    profileForm.nickname = user?.nickname ?? ''
-    profileForm.avatar = user?.avatar ?? ''
-    profileForm.email = user?.email ?? ''
-    profileForm.phone = user?.phone ?? ''
+  () => auth.isAuthenticated,
+  (ok) => {
+    if (ok) {
+      realtime.connect()
+    } else {
+      realtime.disconnect()
+    }
   },
   { immediate: true },
 )
 
-const openProfile = () => {
-  profileVisible.value = true
-  void refreshProfile()
-}
-
-const refreshProfile = async () => {
-  if (!isAuthenticated.value) return
-  refreshingProfile.value = true
-  try {
-    await auth.refreshMe()
-  } catch (e) {
-    showSubmitError(e, '刷新资料失败')
-  } finally {
-    refreshingProfile.value = false
-  }
-}
-
-const saveProfile = async () => {
-  if (!(await validateFormRef(profileRef))) return
-  savingProfile.value = true
-  try {
-    await auth.updateProfile({
-      nickname: profileForm.nickname.trim(),
-      avatar: profileForm.avatar.trim(),
-      email: profileForm.email.trim(),
-      phone: profileForm.phone.trim(),
-    })
-    profileVisible.value = false
-  } catch (e) {
-    showSubmitError(e, '保存资料失败')
-  } finally {
-    savingProfile.value = false
-  }
+const goProfile = async () => {
+  await router.push('/profile')
 }
 
 const onLogout = () => {
   auth.logout()
-  profileVisible.value = false
   void router.push('/')
 }
 </script>
@@ -107,12 +57,14 @@ const onLogout = () => {
           <RouterLink v-if="isAuthenticated" to="/generate" class="nav-link">创作</RouterLink>
           <RouterLink v-if="isAuthenticated" to="/works" class="nav-link">作品库</RouterLink>
           <RouterLink v-if="isAuthenticated" to="/recharge" class="nav-link">充值</RouterLink>
+          <RouterLink v-if="isAuthenticated" to="/profile" class="nav-link">个人中心</RouterLink>
           <RouterLink to="/about" class="nav-link">关于</RouterLink>
         </nav>
 
         <div class="header-actions">
           <template v-if="isAuthenticated">
-        <button type="button" class="user-pill" :aria-expanded="profileVisible ? 'true' : 'false'" @click="openProfile">
+            <NotificationBell />
+            <button type="button" class="user-pill" @click="goProfile">
               <span class="avatar" :style="currentUser?.avatar ? { backgroundImage: `url(${currentUser.avatar})` } : {}">
                 <span v-if="!currentUser?.avatar">{{ avatarText }}</span>
               </span>
@@ -121,6 +73,7 @@ const onLogout = () => {
                 <span class="user-points">{{ currentUser?.points ?? 0 }} 积分</span>
               </span>
             </button>
+            <el-button size="small" round plain @click="onLogout">退出</el-button>
           </template>
           <template v-else>
             <RouterLink to="/login" class="ghost-action">登录</RouterLink>
@@ -135,52 +88,6 @@ const onLogout = () => {
     </main>
 
     <MelodifyPlayer />
-
-    <el-drawer v-model="profileVisible" title="个人中心" size="380px" append-to-body>
-      <div class="profile-panel">
-        <div class="profile-card">
-          <span class="profile-avatar" :style="currentUser?.avatar ? { backgroundImage: `url(${currentUser.avatar})` } : {}">
-            <span v-if="!currentUser?.avatar">{{ avatarText }}</span>
-          </span>
-          <div>
-            <p class="profile-name">{{ displayName || '未命名用户' }}</p>
-            <p class="profile-id">用户名：{{ currentUser?.username }}</p>
-          </div>
-        </div>
-
-        <div class="profile-stats">
-          <div>
-            <span class="stat-label">可用积分</span>
-            <strong>{{ currentUser?.points ?? 0 }}</strong>
-          </div>
-          <el-button link type="primary" :loading="refreshingProfile" @click="refreshProfile()">
-            刷新
-          </el-button>
-        </div>
-
-        <el-form ref="profileRef" :model="profileForm" :rules="profileRules" label-position="top" class="profile-form">
-          <el-form-item label="昵称" prop="nickname">
-            <el-input v-model="profileForm.nickname" placeholder="给自己取个创作者昵称" maxlength="50" clearable />
-          </el-form-item>
-          <el-form-item label="头像地址" prop="avatar">
-            <el-input v-model="profileForm.avatar" placeholder="https://..." maxlength="255" clearable />
-          </el-form-item>
-          <el-form-item label="邮箱" prop="email">
-            <el-input v-model="profileForm.email" placeholder="用于后续通知能力" maxlength="100" clearable />
-          </el-form-item>
-          <el-form-item label="手机" prop="phone">
-            <el-input v-model="profileForm.phone" placeholder="选填" maxlength="20" clearable />
-          </el-form-item>
-        </el-form>
-
-        <div class="profile-actions">
-          <el-button class="profile-save" type="primary" :loading="savingProfile" @click="saveProfile">
-            保存资料
-          </el-button>
-          <el-button class="profile-logout" plain @click="onLogout">退出登录</el-button>
-        </div>
-      </div>
-    </el-drawer>
   </div>
 </template>
 
@@ -335,8 +242,7 @@ const onLogout = () => {
   box-shadow: 0 6px 16px rgba(15, 23, 42, 0.04);
 }
 
-.avatar,
-.profile-avatar {
+.avatar {
   background-size: cover;
   background-position: center;
   background-color: #6366f1;
@@ -372,81 +278,6 @@ const onLogout = () => {
   max-width: min(1180px, 100%);
   margin: 0 auto;
   padding: 2rem clamp(1rem, 4vw, 2rem) 3.5rem;
-}
-
-.profile-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.profile-card,
-.profile-stats {
-  border-radius: 1.25rem;
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  background: #f8fafc;
-}
-
-.profile-card {
-  display: flex;
-  align-items: center;
-  gap: 0.9rem;
-  padding: 1rem;
-}
-
-.profile-avatar {
-  width: 3.8rem;
-  height: 3.8rem;
-  display: grid;
-  place-items: center;
-  flex: none;
-  border-radius: 1.3rem;
-  font-size: 1.35rem;
-}
-
-.profile-name {
-  font-size: 1.08rem;
-  font-weight: 800;
-  color: var(--melodify-strong);
-}
-
-.profile-id {
-  margin-top: 0.2rem;
-  color: var(--melodify-muted);
-  font-size: 0.85rem;
-}
-
-.profile-stats {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.85rem 1rem;
-}
-
-.stat-label {
-  display: block;
-  font-size: 0.78rem;
-  color: var(--melodify-muted);
-}
-
-.profile-stats strong {
-  font-size: 1.45rem;
-  color: var(--melodify-strong);
-}
-
-.profile-form {
-  margin-top: 0.25rem;
-}
-
-.profile-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.75rem;
-}
-
-.profile-save,
-.profile-logout {
-  width: 100%;
 }
 
 @media (max-width: 720px) {

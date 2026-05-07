@@ -28,6 +28,10 @@ public class AudioMirrorServiceImpl implements AudioMirrorService {
 
 	private final MelodifyAudioStorageProperties props;
 
+	/**
+	 * 若启用本地镜像：GET 远端 MP3 写入 {@code local-dir}，返回 {@code public-uri-prefix} 下的可访问路径；
+	 * 任一步失败或非 http(s) URL 则<strong>原样返回</strong> {@code remoteUrl}，不阻断业务。
+	 */
 	@Override
 	public String mirrorRemoteToLocalIfEnabled(String remoteUrl, String assetBizId) {
 		if (!props.isEnabled() || !StringUtils.hasText(remoteUrl) || !StringUtils.hasText(assetBizId)) {
@@ -70,6 +74,7 @@ public class AudioMirrorServiceImpl implements AudioMirrorService {
 		}
 	}
 
+	/** 只允许 32 位小写十六进制（与 {@link com.melodify.support.BizIds} 生成的 assetId 一致），防路径穿越与非法文件名。 */
 	private static String sanitizeFileName(String assetBizId) {
 		String s = assetBizId.strip().toLowerCase();
 		if (!s.matches("[a-f0-9]{32}")) {

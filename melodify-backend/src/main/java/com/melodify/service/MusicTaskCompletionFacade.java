@@ -4,8 +4,10 @@ import com.melodify.config.MusicGenerationProperties;
 import com.melodify.constants.MusicTaskStatuses;
 import com.melodify.entity.MusicAsset;
 import com.melodify.entity.MusicTask;
+import com.melodify.event.GenerationFinishedEvent;
 import com.melodify.support.BizIds;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -23,6 +25,7 @@ public class MusicTaskCompletionFacade {
 	private final MusicAssetService musicAssetService;
 	private final MusicGenerationProperties properties;
 	private final AudioMirrorService audioMirrorService;
+	private final ApplicationEventPublisher applicationEventPublisher;
 
 	/** 模拟通路：占位音频链接。 */
 	@Transactional(rollbackFor = Exception.class)
@@ -41,6 +44,7 @@ public class MusicTaskCompletionFacade {
 			return;
 		}
 
+		/* 与其它异步路径争抢同一任务时，仅一例能 status=GENERATING→SUCCEEDED */
 		boolean transitioned = musicTaskService.lambdaUpdate()
 				.eq(MusicTask::getId, internalMusicTaskPk)
 				.eq(MusicTask::getStatus, MusicTaskStatuses.GENERATING)
@@ -63,6 +67,8 @@ public class MusicTaskCompletionFacade {
 		MusicAsset asset = newAsset(internalMusicTaskPk, task.getUserId(), finalTitle, finalUrl, durationSec);
 		asset.setFileUrl(audioMirrorService.mirrorRemoteToLocalIfEnabled(finalUrl, asset.getAssetId()));
 		musicAssetService.save(asset);
+		String bizId = task.getTaskId() != null ? task.getTaskId() : "";
+		applicationEventPublisher.publishEvent(new GenerationFinishedEvent(task.getUserId(), bizId, true, finalTitle, null));
 	}
 
 	/**
@@ -141,9 +147,13 @@ public class MusicTaskCompletionFacade {
 
 	@Transactional(rollbackFor = Exception.class)
 	public boolean markGenerationFailed(Long internalMusicTaskPk, String errorCode, String errorMessage) {
+		MusicTask before = musicTaskService.getById(internalMusicTaskPk);
+		if (before == null) {
+			return false;
+		}
 		String code = truncate(errorCode, 64);
 		String msg = truncate(errorMessage, 500);
-		return musicTaskService.lambdaUpdate()
+		boolean updated = musicTaskService.lambdaUpdate()
 				.eq(MusicTask::getId, internalMusicTaskPk)
 				.eq(MusicTask::getStatus, MusicTaskStatuses.GENERATING)
 				.set(MusicTask::getStatus, MusicTaskStatuses.FAILED)
@@ -151,6 +161,14 @@ public class MusicTaskCompletionFacade {
 				.set(MusicTask::getErrorMessage, msg != null ? msg : "")
 				.set(MusicTask::getFinishedAt, LocalDateTime.now())
 				.update();
+		if (!updated) {
+			return false;
+		}
+		String bizId = before.getTaskId() != null ? before.getTaskId() : "";
+		applicationEventPublisher.publishEvent(new GenerationFinishedEvent(before.getUserId(), bizId, false,
+				null,
+				msg));
+		return true;
 	}
 
 	private static String truncate(String s, int max) {

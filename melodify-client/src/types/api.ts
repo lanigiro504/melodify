@@ -30,6 +30,20 @@ export interface SysUser {
   updateTime?: string | null
 }
 
+/** 与后端 point_log 对齐 */
+export interface PointLog {
+  id: number
+  logId?: string | null
+  userId?: number | null
+  changeType?: number | null
+  amount?: number | null
+  balance?: number | null
+  bizType?: string | null
+  bizId?: string | null
+  remark?: string | null
+  createTime?: string | null
+}
+
 /** 登录成功后 data：token + 用户快照（无 password） */
 export interface LoginResponse {
   token: string

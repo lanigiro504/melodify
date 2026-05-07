@@ -48,6 +48,12 @@ const router = createRouter({
       component: () => import('@/views/recharge/index.vue'),
     },
     {
+      path: '/profile',
+      name: 'profile',
+      meta: { requiresAuth: true, title: '个人中心' },
+      component: () => import('@/views/profile/index.vue'),
+    },
+    {
       path: '/about',
       name: 'about',
       meta: { title: '关于与帮助' },

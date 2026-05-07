@@ -87,6 +87,10 @@ public class ClientMusicAssetController {
 				.last("LIMIT 1");
 	}
 
+	/**
+	 * Suno 慢于前端轮询时可能先落成「占位试听」链接；一旦有 vendor_task_id 且成品仍占位/缺失，
+	 * 在拉成品接口里同步追一次 record-info，缩短用户看到占位的时间窗。
+	 */
 	private boolean shouldTrySyncSunoAsset(MusicTask task, MusicAsset asset) {
 		if (task == null || !StringUtils.hasText(task.getVendorTaskId())) {
 			return false;

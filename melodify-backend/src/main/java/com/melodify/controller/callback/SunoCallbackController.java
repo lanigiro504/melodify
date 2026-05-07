@@ -25,6 +25,10 @@ public class SunoCallbackController {
 	private final SunoCallbackProcessor sunoCallbackProcessor;
 	private final SunoApiProperties sunoApiProperties;
 
+	/**
+	 * 尽快 200：校验 query token 后立即 {@linkplain com.melodify.integration.suno.SunoCallbackProcessor#processCallbackAsync}，
+	 * 业务在后台线程跑，满足 Suno「约 15s 内响应」的 SLA。
+	 */
 	@PostMapping
 	public ResponseEntity<Map<String, String>> receive(
 			@RequestBody JsonNode body,

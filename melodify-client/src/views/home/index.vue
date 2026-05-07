@@ -58,6 +58,8 @@ const goLogin = () => router.push('/login')
           <template v-if="isAuthenticated">
             <span aria-hidden="true"> · </span>
             <RouterLink to="/recharge">积分</RouterLink>
+            <span aria-hidden="true"> · </span>
+            <RouterLink to="/profile">个人中心</RouterLink>
           </template>
         </p>
       </div>

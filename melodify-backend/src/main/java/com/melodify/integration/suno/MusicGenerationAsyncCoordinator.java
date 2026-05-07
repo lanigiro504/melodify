@@ -21,6 +21,10 @@ public class MusicGenerationAsyncCoordinator {
 	private final MusicSimulatedGenerationRunner simulatedGenerationRunner;
 	private final MusicSunoGenerationRunner sunoGenerationRunner;
 
+	/**
+	 * 提交事务后的入口：按 provider + 密钥决定走真实 Suno 还是本地占位；
+	 * auto 且无密钥时不抛错而是 WARN + 占位，便于本地开发与联调。
+	 */
 	public void dispatchAfterSubmit(Long internalMusicTaskPk) {
 		boolean keyOk = sunoApiClient.isConfigured();
 		String rawProv = resolveProviderRaw();

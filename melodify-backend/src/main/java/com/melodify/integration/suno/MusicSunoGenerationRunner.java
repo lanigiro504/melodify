@@ -51,6 +51,7 @@ public class MusicSunoGenerationRunner {
 	private record CompletedClip(String title, String audioUrl, int durationSec) {
 	}
 
+	/** 异步：POST /generate 拿 vendorTaskId → 写入任务 → {@linkplain #pollUntilDone}，失败则退费。 */
 	@Async("musicTaskExecutor")
 	public void completeAfterSubmit(Long internalMusicTaskPk) {
 		MusicTask task = musicTaskService.getById(internalMusicTaskPk);
@@ -84,6 +85,7 @@ public class MusicSunoGenerationRunner {
 		pollUntilDone(internalMusicTaskPk, sunoVendorId);
 	}
 
+	/** 阻塞轮询 GET record-info：成功则落库；明确失败状态走 {@linkplain #handleFailure}；拖到 deadline 记超时失败。 */
 	private void pollUntilDone(Long internalPk, String sunoVendorId) {
 		MusicTask task = musicTaskService.getById(internalPk);
 		if (task == null) {
@@ -180,6 +182,7 @@ public class MusicSunoGenerationRunner {
 		if ("text".equals(callbackType)) {
 			return;
 		}
+		/* FIRST_SUCCESS：data.data 常为轨道路由；COMPLETE：可能只靠轮询，故无轨时兜底再拉 record-info */
 		JsonNode tracks = data.get("data");
 		if (tracks != null && tracks.isArray() && !tracks.isEmpty()) {
 			persistClipFromCallback(internalPk, tracks.get(0));
@@ -476,6 +479,7 @@ public class MusicSunoGenerationRunner {
 		return fallback;
 	}
 
+	/** 本节点无则向下钻取 {@code data}/{@code response}，兼容 Suno 把字段包多层的 JSON。 */
 	private static String textField(JsonNode node, String key) {
 		if (node == null || !node.isObject()) {
 			return "";
@@ -493,6 +497,9 @@ public class MusicSunoGenerationRunner {
 		return "";
 	}
 
+	/**
+	 * 仅当 CAS 把任务从 GENERATING 迁到 FAILED 成功时才退费，防止重复退款或与成功态竞态。
+	 */
 	private void handleFailure(Long internalPk, MusicTask task, String code, String message) {
 		boolean moved = completionFacade.markGenerationFailed(internalPk, code, message);
 		if (moved) {

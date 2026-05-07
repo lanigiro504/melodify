@@ -94,6 +94,10 @@ public class RechargeOrderServiceImpl extends ServiceImpl<RechargeOrderMapper, R
 		return dto;
 	}
 
+	/**
+	 * 模拟支付入账：先按 notify_id 全局去重 → 校验时间窗与 HMAC；
+	 * 已支付订单仅记账成功日志并返回（幂等）；否则 CAS pending→paid 后加积分。
+	 */
 	@Override
 	@Transactional(rollbackFor = Exception.class)
 	public RechargeOrderVO handleSimulatedNotify(SimulatedPayNotifyDTO dto) {
@@ -125,6 +129,7 @@ public class RechargeOrderServiceImpl extends ServiceImpl<RechargeOrderMapper, R
 		return RechargeOrderVO.from(getById(order.getId()));
 	}
 
+	/** 重放窗口内有效 + 常量时间比对 HMAC，避免网络嗅探配合下通过字节比较耗时推断签名。 */
 	private void verifyNotify(SimulatedPayNotifyDTO dto) {
 		long now = Instant.now().getEpochSecond();
 		if (Math.abs(now - dto.getTimestamp()) > NOTIFY_TTL_SECONDS) {
@@ -179,6 +184,7 @@ public class RechargeOrderServiceImpl extends ServiceImpl<RechargeOrderMapper, R
 		}
 	}
 
+	/** Hex 字符串逐位 XOR 累加，避免提前短路暴露「第几位不同」（侧信道弱化）。 */
 	private static boolean constantTimeEquals(String a, String b) {
 		if (a == null || b == null || a.length() != b.length()) {
 			return false;

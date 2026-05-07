@@ -6,6 +6,7 @@ import {
   FolderOpened,
   Goods,
   Key,
+  Odometer,
   Postcard,
   Sell,
   UserFilled,
@@ -13,6 +14,7 @@ import {
 
 export const ADMIN_ROUTE_NAMES = {
   LOGIN: 'admin-login',
+  DASHBOARD: 'admin-dashboard',
   USERS: 'admin-users',
   ROLES: 'admin-roles',
   TASKS: 'admin-tasks',
@@ -23,7 +25,7 @@ export const ADMIN_ROUTE_NAMES = {
 } as const
 
 /** 控制台根路径重定向的子路径片段（无前导 /） */
-export const ADMIN_DEFAULT_CHILD_PATH = 'tasks'
+export const ADMIN_DEFAULT_CHILD_PATH = 'dashboard'
 
 export type AdminNavLeaf = {
   path: string
@@ -44,6 +46,16 @@ export type AdminNavSection =
     }
 
 export const adminNavSections: AdminNavSection[] = [
+  {
+    type: 'item',
+    leaf: {
+      path: 'dashboard',
+      name: ADMIN_ROUTE_NAMES.DASHBOARD,
+      title: '仪表盘',
+      icon: Odometer,
+      loader: () => import('@/views/dashboard/index.vue'),
+    },
+  },
   {
     type: 'item',
     leaf: {

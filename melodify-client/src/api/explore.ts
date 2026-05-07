@@ -13,13 +13,20 @@ export interface ExploreAssetItem {
   createTime?: string | null
 }
 
+export type ExploreSortMode = 'NEWEST' | 'LIKES'
+
 export const pageExploreAssets = async (
   current = 1,
   size = 12,
+  options?: { keyword?: string; sort?: ExploreSortMode },
 ): Promise<Result<PageRecords<ExploreAssetItem>>> => {
-  const { data } = await http.get<Result<PageRecords<ExploreAssetItem>>>(
-    '/public/explore/assets',
-    { params: { current, size } },
-  )
+  const { data } = await http.get<Result<PageRecords<ExploreAssetItem>>>('/public/explore/assets', {
+    params: {
+      current,
+      size,
+      ...(options?.keyword?.trim() ? { keyword: options.keyword.trim() } : {}),
+      sort: options?.sort ?? 'NEWEST',
+    },
+  })
   return data
 }

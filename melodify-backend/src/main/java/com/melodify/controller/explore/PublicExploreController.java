@@ -22,9 +22,12 @@ public class PublicExploreController {
 	@GetMapping("/assets")
 	public Result<IPage<MusicExploreItemVO>> assets(
 			@RequestParam(defaultValue = "1") long current,
-			@RequestParam(defaultValue = "12") long size) {
+			@RequestParam(defaultValue = "12") long size,
+			@RequestParam(required = false) String keyword,
+			@RequestParam(defaultValue = "NEWEST") String sort) {
 		long page = Math.max(1, current);
 		long pageSize = Math.min(Math.max(1, size), MAX_PAGE_SIZE);
-		return Result.success(publicExploreService.pagePublicAssets(page, pageSize));
+		String mode = sort == null || sort.isBlank() ? "NEWEST" : sort.trim();
+		return Result.success(publicExploreService.pagePublicAssets(page, pageSize, keyword, mode));
 	}
 }

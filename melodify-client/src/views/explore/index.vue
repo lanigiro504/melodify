@@ -3,9 +3,9 @@
  * 公开广场：无需登录即可浏览 isPublic=1 的作品并发起到全局播放器。
  */
 import { ElMessage } from 'element-plus'
-import { onMounted, reactive, ref } from 'vue'
+import { onMounted, reactive, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
-import { pageExploreAssets, type ExploreAssetItem } from '@/api/explore'
+import { pageExploreAssets, type ExploreAssetItem, type ExploreSortMode } from '@/api/explore'
 import { usePlayerStore } from '@/stores/player'
 import { unwrapResult } from '@/utils/apiResult'
 import { exploreItemPlaySubtitle } from '@/utils/exploreDisplay'
@@ -19,6 +19,7 @@ const loading = ref(false)
 const rows = ref<ExploreAssetItem[]>([])
 const total = ref(0)
 const pager = reactive({ current: 1, size: 12 })
+const filters = reactive({ keyword: '', sort: 'NEWEST' as ExploreSortMode })
 
 const EXPLORE_PAGE_SIZE_MAX = 48
 
@@ -29,6 +30,7 @@ async function fetchList() {
       await pageExploreAssets(
         Math.max(1, pager.current),
         Math.min(EXPLORE_PAGE_SIZE_MAX, Math.max(1, pager.size)),
+        { keyword: filters.keyword.trim() || undefined, sort: filters.sort },
       ),
     )
     rows.value = page.records
@@ -54,6 +56,19 @@ const onPlay = (item: ExploreAssetItem) => {
   })
 }
 
+watch(
+  () => filters.sort,
+  () => {
+    pager.current = 1
+    void fetchList()
+  },
+)
+
+const applySearch = () => {
+  pager.current = 1
+  void fetchList()
+}
+
 onMounted(() => void fetchList())
 </script>
 
@@ -63,9 +78,23 @@ onMounted(() => void fetchList())
       <div>
         <p class="page-eyebrow">Explore</p>
         <h1 class="page-title page-title--lg">作品广场</h1>
-        <p class="page-desc page-desc--wide">创作者公开分享的成品，点击即可用底部播放器试听（无需登录）。</p>
+        <p class="page-desc page-desc--wide">创作者公开分享的成品，可按关键词检索，或按最热排序；无需登录便可试听。</p>
       </div>
-      <el-button round :loading="loading" @click="fetchList">刷新</el-button>
+      <div class="explore-toolbar">
+        <el-input
+          v-model="filters.keyword"
+          placeholder="搜索标题或创作描述关键词"
+          clearable
+          class="explore-search"
+          @keyup.enter="applySearch"
+        />
+        <el-select v-model="filters.sort" class="explore-sort" placeholder="排序">
+          <el-option label="最新发布" value="NEWEST" />
+          <el-option label="最热（点赞）" value="LIKES" />
+        </el-select>
+        <el-button type="primary" round :loading="loading" @click="applySearch">搜索</el-button>
+        <el-button round :loading="loading" @click="fetchList">刷新</el-button>
+      </div>
     </section>
 
     <section v-loading="loading" class="explore-grid">
@@ -189,5 +218,20 @@ onMounted(() => void fetchList())
 .pager-wrap {
   display: flex;
   justify-content: flex-end;
+}
+
+.explore-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  align-items: center;
+}
+
+.explore-search {
+  min-width: min(260px, 100%);
+}
+
+.explore-sort {
+  width: 146px;
 }
 </style>

@@ -30,8 +30,10 @@ public class MusicTaskRecoveryScheduler {
 
 	@Scheduled(fixedDelayString = "${melodify.suno.recovery-fixed-delay-ms:120000}")
 	public void recoverStuckSunoTasks() {
+		/* 刚起跑 1 分钟内的任务不抢：给正常轮询留出时间 */
 		LocalDateTime minAge = LocalDateTime.now().minusMinutes(1);
 		long maxWait = Math.max(60_000L, sunoApiProperties.getMaxWaitMs());
+		/* 早于该时刻已开始且仍卡住 → 超时失败并退费（与 Runner 内部 deadline 一致） */
 		LocalDateTime failIfStartedBefore = LocalDateTime.now().minus(Duration.ofMillis(maxWait));
 
 		List<MusicTask> candidates = musicTaskService.lambdaQuery()
