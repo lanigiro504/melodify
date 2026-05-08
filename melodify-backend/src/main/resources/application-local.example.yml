@@ -9,6 +9,10 @@
 # 创作页只调本平台 /api ，Bearer 只应在后端请求 Suno；不要把密钥写进 melodify-client。
 # =============================================================================
 melodify:
+  # 模拟支付：若需与默认 application.yml 不同的 HMAC 密钥，可在此覆盖或通过 MELODIFY_SIMULATED_PAY_HMAC_SECRET
+  # payment:
+  #   simulated:
+  #     hmac-secret: "your-local-simulated-hmac-secret"
   music-generation:
     # 可与主配置一样省略 provider=auto：只要配置了 api-key / SUNO_API_KEY 即远端真曲
     # provider: simulated

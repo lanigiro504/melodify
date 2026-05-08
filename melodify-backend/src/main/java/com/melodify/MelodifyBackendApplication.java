@@ -5,6 +5,7 @@ import com.melodify.config.MelodifyAvatarStorageProperties;
 import com.melodify.config.MelodifyUserProperties;
 import com.melodify.config.MelodifyAudioStorageProperties;
 import com.melodify.config.MusicGenerationProperties;
+import com.melodify.config.SimulatedPaymentProperties;
 import com.melodify.config.SunoApiProperties;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
@@ -21,7 +22,8 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 @SpringBootApplication(exclude = { UserDetailsServiceAutoConfiguration.class })
 @MapperScan("com.melodify.mapper")
 @EnableConfigurationProperties({ JwtProperties.class, MelodifyUserProperties.class, MusicGenerationProperties.class,
-		SunoApiProperties.class, MelodifyAudioStorageProperties.class, MelodifyAvatarStorageProperties.class })
+		SunoApiProperties.class, MelodifyAudioStorageProperties.class, MelodifyAvatarStorageProperties.class,
+		SimulatedPaymentProperties.class })
 public class MelodifyBackendApplication {
 
 	public static void main(String[] args) {

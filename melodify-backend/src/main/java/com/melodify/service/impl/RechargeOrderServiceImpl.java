@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.melodify.common.exception.BizException;
+import com.melodify.config.SimulatedPaymentProperties;
 import com.melodify.entity.PaymentNotifyLog;
 import com.melodify.entity.PointLog;
 import com.melodify.entity.PointProduct;
@@ -20,9 +21,11 @@ import com.melodify.service.PointProductService;
 import com.melodify.service.RechargeOrderService;
 import com.melodify.service.SysUserService;
 import com.melodify.support.BizIds;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -40,12 +43,19 @@ public class RechargeOrderServiceImpl extends ServiceImpl<RechargeOrderMapper, R
 	private static final int STATUS_PENDING = 0;
 	private static final int STATUS_PAID = 1;
 	private static final long NOTIFY_TTL_SECONDS = 300;
-	private static final String SIGN_SECRET = "melodify-simulated-pay-secret";
 
 	private final PointProductService pointProductService;
 	private final PaymentNotifyLogService paymentNotifyLogService;
 	private final SysUserService sysUserService;
 	private final PointLogService pointLogService;
+	private final SimulatedPaymentProperties simulatedPaymentProperties;
+
+	@PostConstruct
+	void requireSimulatedPaySecret() {
+		if (!StringUtils.hasText(simulatedPaymentProperties.getHmacSecret())) {
+			throw new IllegalStateException("melodify.payment.simulated.hmac-secret must be non-empty");
+		}
+	}
 
 	@Override
 	public IPage<RechargeOrder> pageForAdmin(Page<RechargeOrder> page, Long userId, Integer status) {
@@ -95,14 +105,17 @@ public class RechargeOrderServiceImpl extends ServiceImpl<RechargeOrderMapper, R
 	}
 
 	/**
-	 * 模拟支付入账：先按 notify_id 全局去重 → 校验时间窗与 HMAC；
-	 * 已支付订单仅记账成功日志并返回（幂等）；否则 CAS pending→paid 后加积分。
+	 * 模拟支付入账：校验时间窗与 HMAC；同一 {@code notify_id} 首次成功会落库日志，
+	 * 渠道用相同报文重试时幂等返回已支付订单；否则 CAS pending→paid 后加积分。
 	 */
 	@Override
 	@Transactional(rollbackFor = Exception.class)
 	public RechargeOrderVO handleSimulatedNotify(SimulatedPayNotifyDTO dto) {
-		if (paymentNotifyLogService.lambdaQuery().eq(PaymentNotifyLog::getNotifyId, dto.getNotifyId()).exists()) {
-			throw new BizException(409, "重复支付通知");
+		PaymentNotifyLog existing = paymentNotifyLogService.lambdaQuery()
+				.eq(PaymentNotifyLog::getNotifyId, dto.getNotifyId())
+				.one();
+		if (existing != null) {
+			return handleDuplicateNotifyId(dto, existing);
 		}
 		verifyNotify(dto);
 		RechargeOrder order = lambdaQuery().eq(RechargeOrder::getOrderNo, dto.getOrderNo()).one();
@@ -127,6 +140,30 @@ public class RechargeOrderServiceImpl extends ServiceImpl<RechargeOrderMapper, R
 		creditPoints(order);
 		saveNotify(dto, true, "支付成功");
 		return RechargeOrderVO.from(getById(order.getId()));
+	}
+
+	/**
+	 * 已存在 {@code notify_id}：再验签后若与历史成功记录一致且订单已支付，则直接返回（Webhook 重试友好）。
+	 */
+	private RechargeOrderVO handleDuplicateNotifyId(SimulatedPayNotifyDTO dto, PaymentNotifyLog existing) {
+		verifyNotify(dto);
+		if (!dto.getOrderNo().equals(existing.getOrderNo())) {
+			throw new BizException(409, "通知与已处理记录订单不一致");
+		}
+		RechargeOrder order = lambdaQuery().eq(RechargeOrder::getOrderNo, dto.getOrderNo()).one();
+		if (order == null) {
+			throw new BizException(404, "订单不存在");
+		}
+		if (!order.getAmountCent().equals(dto.getAmountCent())) {
+			throw new BizException(400, "支付金额不匹配");
+		}
+		if (Integer.valueOf(1).equals(existing.getStatus()) && Integer.valueOf(STATUS_PAID).equals(order.getStatus())) {
+			return RechargeOrderVO.from(order);
+		}
+		if (Integer.valueOf(1).equals(existing.getStatus())) {
+			throw new BizException(409, "支付通知已处理但订单未入账，请联系管理员");
+		}
+		throw new BizException(409, "重复支付通知");
 	}
 
 	/** 重放窗口内有效 + 常量时间比对 HMAC，避免网络嗅探配合下通过字节比较耗时推断签名。 */
@@ -172,12 +209,13 @@ public class RechargeOrderServiceImpl extends ServiceImpl<RechargeOrderMapper, R
 		paymentNotifyLogService.save(log);
 	}
 
-	private static String sign(SimulatedPayNotifyDTO dto) {
+	private String sign(SimulatedPayNotifyDTO dto) {
 		String plain = dto.getNotifyId() + "|" + dto.getOrderNo() + "|" + dto.getAmountCent() + "|"
 				+ dto.getTimestamp();
 		try {
 			Mac mac = Mac.getInstance("HmacSHA256");
-			mac.init(new SecretKeySpec(SIGN_SECRET.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+			byte[] keyBytes = simulatedPaymentProperties.getHmacSecret().getBytes(StandardCharsets.UTF_8);
+			mac.init(new SecretKeySpec(keyBytes, "HmacSHA256"));
 			return HexFormat.of().formatHex(mac.doFinal(plain.getBytes(StandardCharsets.UTF_8)));
 		} catch (Exception ex) {
 			throw new IllegalStateException("模拟支付签名失败", ex);

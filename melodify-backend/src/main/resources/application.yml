@@ -43,6 +43,10 @@ server:
 # JWT：生产环境务必用环境变量覆盖 secret，避免仓库泄露
 # music-generation：扣费点数与异步模拟耗时；占位音频仅供联调
 melodify:
+  # 模拟支付回调验签（可与环境变量 MELODIFY_SIMULATED_PAY_HMAC_SECRET 覆盖）
+  payment:
+    simulated:
+      hmac-secret: ${MELODIFY_SIMULATED_PAY_HMAC_SECRET:melodify-simulated-pay-secret}
   # C 端用户：注册赠送积分（≤0 等价于不设赠送，仅用支付/管理员调账兜底）
   user:
     signup-bonus-points: 300

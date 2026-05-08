@@ -1,6 +1,7 @@
 package com.melodify.common.exception;
 
 import com.melodify.common.result.Result;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.BindException;
@@ -14,6 +15,7 @@ import java.util.stream.Collectors;
 /**
  * 将常见异常转为统一 {@link Result}，避免栈信息直接暴露给前端（生产环境可结合日志记录完整堆栈）。
  */
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -52,11 +54,13 @@ public class GlobalExceptionHandler {
 	 */
 	@ExceptionHandler(DataIntegrityViolationException.class)
 	public Result<Void> handleDataIntegrity(DataIntegrityViolationException e) {
+		log.warn("数据完整性约束冲突: {}", e.getMostSpecificCause().getMessage());
 		return Result.error(CODE_CONFLICT, "数据冲突，请检查是否重复注册或违反约束");
 	}
 
 	@ExceptionHandler(Exception.class)
 	public Result<Void> handleOthers(Exception e) {
+		log.error("未处理异常", e);
 		return Result.error(500, "系统繁忙，请稍后再试");
 	}
 }
