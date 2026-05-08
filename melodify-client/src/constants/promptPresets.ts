@@ -122,19 +122,34 @@ export const PROMPT_DIMENSIONS: PromptDimension[] = [
   },
 ]
 
-/** 自定义模式风格快选：按钮展示中文名；value 为写入「风格」的英文描述（便于 Suno 解析），悬停可看完整英文 */
-export interface StyleQuickPreset {
-  label: string
-  value: string
-}
+/** 自定义模式 ·「风格」快选：界面显示中文，填入仍为英文提示词（兼容 Suno） */
+export type StyleQuickPreset = { label: string; value: string }
 
 export const STYLE_QUICK_PRESETS: StyleQuickPreset[] = [
-  { label: '梦幻流行 · 女声', value: 'Dream pop, female vocal, lush synth pads, 110 BPM' },
-  { label: '原声民谣 · 男声', value: 'Acoustic folk, male vocal, fingerpicked guitar, intimate' },
-  { label: '国风融合 · 打击', value: 'Chinese guofeng fusion, guzheng plucks, modern drums, dramatic' },
-  { label: 'Lo-fi · 松弛', value: 'Lo-fi hip hop, dusty drums, warm bass, chill' },
-  { label: '独立摇滚 · 张力', value: 'Indie rock, distorted guitars, driving drums, anthemic chorus' },
-  { label: 'Neo-soul · 律动', value: 'Neo-soul, Rhodes, tight groove, stacked harmonies' },
+  {
+    label: '梦幻流行 · 女声 · 合成铺底',
+    value: 'Dream pop, female vocal, lush synth pads, 110 BPM',
+  },
+  {
+    label: '民谣 · 木吉他 · 男声叙述',
+    value: 'Acoustic folk, male vocal, fingerpicked guitar, intimate',
+  },
+  {
+    label: '国风融合 · 古筝 · 现代鼓',
+    value: 'Chinese guofeng fusion, guzheng plucks, modern drums, dramatic',
+  },
+  {
+    label: 'Lo-fi · 低保真 · 松弛',
+    value: 'Lo-fi hip hop, dusty drums, warm bass, chill',
+  },
+  {
+    label: '独立摇滚 · 失真吉他',
+    value: 'Indie rock, distorted guitars, driving drums, anthemic chorus',
+  },
+  {
+    label: 'Neo-soul · 电钢琴 · 紧密律动',
+    value: 'Neo-soul, Rhodes, tight groove, stacked harmonies',
+  },
 ]
 
 /** 标题灵感（填入成品标题） */

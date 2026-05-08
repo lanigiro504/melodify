@@ -51,21 +51,21 @@ const onLogout = () => {
     <a href="#melodify-main" class="melodify-skip-link">跳到主内容</a>
     <header class="app-header">
       <div class="header-inner">
-          <RouterLink class="brand" to="/">
-            <img
-              class="brand-mark"
-              :src="brandLogoSrc"
-              width="36"
-              height="36"
-              alt=""
-              decoding="async"
-              fetchpriority="high"
-            />
-            <span class="brand-text">
-              <span class="brand-name">Melodify</span>
-              <span class="brand-subtitle">AI 音乐工作室</span>
-            </span>
-          </RouterLink>
+        <RouterLink class="brand" to="/">
+          <img
+            class="brand-mark"
+            :src="brandLogoSrc"
+            width="40"
+            height="40"
+            alt=""
+            decoding="async"
+            fetchpriority="high"
+          />
+          <span class="brand-text">
+            <span class="brand-name">Melodify</span>
+            <span class="brand-subtitle">AI Music Studio</span>
+          </span>
+        </RouterLink>
 
         <nav class="app-nav" aria-label="主导航">
           <RouterLink to="/" class="nav-link">首页</RouterLink>
@@ -161,13 +161,19 @@ const onLogout = () => {
   opacity: 0.94;
 }
 
+.brand:hover .brand-mark {
+  transform: scale(1.02);
+}
+
 .brand-mark {
   flex-shrink: 0;
-  width: 2.25rem;
-  height: 2.25rem;
+  width: 2.5rem;
+  height: 2.5rem;
   display: block;
   border-radius: var(--melodify-radius-sm);
   object-fit: contain;
+  background: transparent;
+  transition: transform 0.2s ease;
 }
 
 .brand-text {
@@ -192,9 +198,10 @@ const onLogout = () => {
 
 .brand-subtitle {
   margin-top: -0.02rem;
-  font-size: 0.68rem;
+  font-size: 0.65rem;
   color: var(--melodify-muted);
-  letter-spacing: 0.06em;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   font-weight: 500;
 }
 
@@ -246,16 +253,8 @@ const onLogout = () => {
     transition: none;
   }
 
-  .brand:hover .brand-mark-ring {
+  .brand:hover .brand-mark {
     transform: none;
-  }
-
-  .brand-mark-ring {
-    transition: none;
-  }
-
-  .brand-mark {
-    transition: none;
   }
 
   .user-pill:active {
