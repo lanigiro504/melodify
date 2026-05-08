@@ -14,6 +14,15 @@ import { unwrapResult } from '@/utils/apiResult'
 import { showSubmitError } from '@/utils/showSubmitError'
 import { extractTrackLyrics } from '@/utils/trackLyrics'
 import { validateFormRef } from '@/utils/validateFormRef'
+import {
+  appendPromptFragment,
+  FULL_PROMPT_PRESETS,
+  LYRIC_SKELETONS,
+  PROMPT_COMPOSITION_RULES,
+  PROMPT_DIMENSIONS,
+  STYLE_QUICK_PRESETS,
+  TITLE_IDEA_PRESETS,
+} from '@/constants/promptPresets'
 
 defineOptions({ name: 'GenerateMusicPage' })
 
@@ -30,13 +39,8 @@ const modelOptions = [
   { label: 'V4', value: 'V4', desc: '兼容旧任务' },
 ]
 
-const promptExamples = [
-  '夏夜城市里的梦幻流行，女声，带一点电子氛围，副歌有记忆点',
-  '适合咖啡馆播放的轻爵士，温暖、松弛、带钢琴与贝斯',
-  '国风电子融合，描写远山与月光，节奏逐渐推进',
-]
-
 const formRef = ref<FormInstance>()
+const presetCollapse = ref<string | string[]>(['inspire'])
 const submitting = ref(false)
 const pollTimer = ref<ReturnType<typeof setInterval> | null>(null)
 
@@ -74,8 +78,24 @@ function replayCompletedPlayback() {
   if (t) player.playTrack({ ...t })
 }
 
-const applyExample = (text: string) => {
+const applyFullPresetText = (text: string) => {
   form.prompt = text
+}
+
+const appendDimensionTag = (tag: string) => {
+  form.prompt = appendPromptFragment(form.prompt, tag)
+}
+
+const applyStyleQuick = (text: string) => {
+  form.style = text
+}
+
+const applyTitleIdea = (text: string) => {
+  form.title = text
+}
+
+const applyLyricSkeleton = (text: string) => {
+  form.lyrics = text
 }
 
 const rules = computed<FormRules>(() => ({
@@ -343,6 +363,18 @@ const onSubmit = async () => {
               />
             </el-form-item>
             <el-form-item label="精确歌词" prop="lyrics">
+              <p class="lyric-skeleton-hint">可选用下方骨架，再替换为你的词。</p>
+              <div class="lyric-skeleton-row">
+                <button
+                  v-for="sk in LYRIC_SKELETONS"
+                  :key="sk.id"
+                  type="button"
+                  class="lyric-skeleton-chip"
+                  @click="applyLyricSkeleton(sk.text)"
+                >
+                  {{ sk.label }}
+                </button>
+              </div>
               <el-input
                 v-model="form.lyrics"
                 type="textarea"
@@ -355,18 +387,6 @@ const onSubmit = async () => {
             </el-form-item>
           </template>
 
-          <div v-if="!form.customMode || form.instrumental" class="prompt-chips">
-            <button
-              v-for="text in promptExamples"
-              :key="text"
-              type="button"
-              class="prompt-chip"
-              @click="applyExample(text)"
-            >
-              {{ text }}
-            </button>
-          </div>
-
           <div v-if="form.customMode" class="custom-box">
             <div class="form-row">
               <el-form-item label="风格">
@@ -377,7 +397,73 @@ const onSubmit = async () => {
               </el-form-item>
             </div>
             <el-checkbox v-model="form.instrumental">纯器乐（无人声）</el-checkbox>
+
+            <div class="custom-presets-block">
+              <p class="preset-block-title">风格快选（填入「风格」，可再手改）</p>
+              <div class="prompt-chips prompt-chips--tight">
+                <button
+                  v-for="(s, i) in STYLE_QUICK_PRESETS"
+                  :key="`st-${i}`"
+                  type="button"
+                  class="prompt-chip prompt-chip--compact"
+                  :title="s"
+                  @click="applyStyleQuick(s)"
+                >
+                  {{ s.length > 42 ? `${s.slice(0, 40)}…` : s }}
+                </button>
+              </div>
+              <p class="preset-block-title">标题灵感</p>
+              <div class="prompt-chips prompt-chips--tight">
+                <button
+                  v-for="t in TITLE_IDEA_PRESETS"
+                  :key="t"
+                  type="button"
+                  class="dim-chip dim-chip--title"
+                  @click="applyTitleIdea(t)"
+                >
+                  {{ t }}
+                </button>
+              </div>
+            </div>
           </div>
+
+          <el-collapse v-model="presetCollapse" class="inspire-collapse">
+            <el-collapse-item title="灵感预设库（规则 + 标签 / 整段）" name="inspire">
+              <ul class="preset-rule-list">
+                <li v-for="(line, idx) in PROMPT_COMPOSITION_RULES" :key="idx">{{ line }}</li>
+              </ul>
+
+              <p class="preset-block-title">整段示例（替换当前创作描述）</p>
+              <div class="prompt-chips prompt-chips--full">
+                <button
+                  v-for="item in FULL_PROMPT_PRESETS"
+                  :key="item.id"
+                  type="button"
+                  class="prompt-chip prompt-chip--named"
+                  :title="item.text"
+                  @click="applyFullPresetText(item.text)"
+                >
+                  {{ item.label }}
+                </button>
+              </div>
+
+              <p class="preset-block-title">按标签拼装（追加到上方创作描述 / 氛围描述）</p>
+              <div v-for="dim in PROMPT_DIMENSIONS" :key="dim.id" class="dim-block">
+                <span class="dim-block__title">{{ dim.title }}</span>
+                <div class="dim-block__tags">
+                  <button
+                    v-for="tag in dim.tags"
+                    :key="`${dim.id}-${tag}`"
+                    type="button"
+                    class="dim-chip"
+                    @click="appendDimensionTag(tag)"
+                  >
+                    {{ tag }}
+                  </button>
+                </div>
+              </div>
+            </el-collapse-item>
+          </el-collapse>
 
           <div class="submit-row">
             <el-button type="primary" size="large" :loading="submitting" @click="onSubmit">
@@ -411,6 +497,7 @@ const onSubmit = async () => {
         <section class="tips-card melodify-glass-card">
           <h2>创作建议</h2>
           <ol>
+            <li>展开下方「灵感预设库」：先看撰写要点，再用整段示例或标签拼装。</li>
             <li>先写情绪、风格和场景，再补充乐器与人声。</li>
             <li><strong>简单模式</strong>只有「创作描述」；<strong>自定义 + 人声</strong>请把逐行歌词放在「精确歌词」，与上面的补充描述区分开。</li>
             <li><strong>自定义 + 纯器乐</strong>只需标题与风格，氛围描述选填。</li>
@@ -503,6 +590,142 @@ const onSubmit = async () => {
 .prompt-chip:focus-visible {
   outline: 2px solid var(--el-color-primary);
   outline-offset: 2px;
+}
+
+.inspire-collapse {
+  margin: 0.5rem 0 1rem;
+  border: 1px solid rgba(100, 92, 85, 0.14);
+  border-radius: var(--melodify-radius-lg, 1rem);
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.preset-rule-list {
+  margin: 0 0 1rem;
+  padding-left: 1.2rem;
+  color: var(--melodify-muted);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.preset-rule-list li + li {
+  margin-top: 0.35rem;
+}
+
+.preset-block-title {
+  margin: 0.85rem 0 0.45rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--melodify-strong);
+}
+
+.preset-block-title:first-of-type {
+  margin-top: 0;
+}
+
+.prompt-chips--full {
+  margin: 0 0 0.35rem;
+}
+
+.prompt-chips--tight {
+  margin: 0 0 0.5rem;
+  gap: 0.45rem;
+}
+
+.prompt-chip--named {
+  font-size: 0.8rem;
+  max-width: 100%;
+}
+
+.prompt-chip--compact {
+  font-size: 0.72rem;
+  font-weight: 500;
+  text-align: left;
+  line-height: 1.3;
+  border-radius: var(--melodify-radius-md, 0.65rem);
+  padding: 0.38rem 0.55rem;
+  white-space: normal;
+}
+
+.dim-block {
+  margin-bottom: 0.65rem;
+}
+
+.dim-block:last-child {
+  margin-bottom: 0;
+}
+
+.dim-block__title {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--melodify-muted);
+  margin-bottom: 0.4rem;
+}
+
+.dim-block__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.dim-chip {
+  border: 1px solid var(--melodify-divider-strong, rgba(58, 48, 40, 0.15));
+  border-radius: 999px;
+  background: var(--melodify-surface-sunken, #f3efe6);
+  color: var(--melodify-strong);
+  padding: 0.28rem 0.55rem;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-family: inherit;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.dim-chip:hover {
+  border-color: rgba(var(--melodify-primary-rgb), 0.25);
+  background: var(--el-color-primary-light-9);
+}
+
+.dim-chip--title {
+  font-weight: 600;
+  color: var(--el-color-primary);
+}
+
+.lyric-skeleton-hint {
+  margin: 0 0 0.4rem;
+  font-size: 0.8rem;
+  color: var(--melodify-muted);
+}
+
+.lyric-skeleton-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-bottom: 0.65rem;
+}
+
+.lyric-skeleton-chip {
+  border: 1px dashed rgba(var(--melodify-primary-rgb), 0.35);
+  border-radius: 999px;
+  background: rgba(var(--melodify-primary-rgb), 0.06);
+  color: var(--el-color-primary);
+  padding: 0.32rem 0.65rem;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-family: inherit;
+  font-weight: 600;
+}
+
+.lyric-skeleton-chip:hover {
+  background: var(--el-color-primary-light-9);
+}
+
+.custom-presets-block {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px dashed rgba(100, 92, 85, 0.18);
 }
 
 .custom-box {
