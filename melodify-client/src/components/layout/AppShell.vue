@@ -76,7 +76,6 @@ const onLogout = () => {
           <RouterLink v-if="isAuthenticated" to="/works" class="nav-link">作品库</RouterLink>
           <RouterLink v-if="isAuthenticated" to="/recharge" class="nav-link">充值</RouterLink>
           <RouterLink v-if="isAuthenticated" to="/profile" class="nav-link">个人中心</RouterLink>
-          <RouterLink to="/about" class="nav-link">关于</RouterLink>
         </nav>
 
         <div class="header-actions">

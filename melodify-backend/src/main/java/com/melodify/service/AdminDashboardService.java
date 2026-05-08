@@ -2,7 +2,6 @@ package com.melodify.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.melodify.constants.MusicTaskStatuses;
-import com.melodify.entity.MusicAsset;
 import com.melodify.entity.MusicTask;
 import com.melodify.entity.RechargeOrder;
 import com.melodify.mapper.AdminDashboardMapper;
@@ -14,7 +13,6 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.sql.Date;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -37,7 +35,6 @@ public class AdminDashboardService {
 
 	private final SysUserService sysUserService;
 	private final MusicTaskService musicTaskService;
-	private final MusicAssetService musicAssetService;
 	private final RechargeOrderService rechargeOrderService;
 	private final AdminDashboardMapper adminDashboardMapper;
 
@@ -136,11 +133,6 @@ public class AdminDashboardService {
 		long centSumRaw = sums.isEmpty() ? 0L : ((Number) sums.get(0).getOrDefault("s", 0L)).longValue();
 		int centSum = centSumRaw > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) centSumRaw;
 
-		long publicAssets = musicAssetService.lambdaQuery()
-				.eq(MusicAsset::getIsPublic, 1)
-				.eq(MusicAsset::getStatus, 1)
-				.count();
-
 		BigDecimal yuanApprox = BigDecimal.valueOf(centSum)
 				.divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
 
@@ -152,8 +144,7 @@ public class AdminDashboardService {
 				failedToday,
 				rechargePaidTodayOrders,
 				centSum,
-				yuanApprox,
-				publicAssets);
+				yuanApprox);
 	}
 
 	private static Map<LocalDate, Long> toDayCountMap(List<Map<String, Object>> rows) {
@@ -192,11 +183,11 @@ public class AdminDashboardService {
 		if (v == null) {
 			return 0L;
 		}
-		if (v instanceof BigDecimal bd) {
-			return bd.longValue();
+		if (v instanceof BigDecimal) {
+			return ((BigDecimal) v).longValue();
 		}
-		if (v instanceof Number n) {
-			return n.longValue();
+		if (v instanceof Number) {
+			return ((Number) v).longValue();
 		}
 		return Long.parseLong(v.toString());
 	}
@@ -205,14 +196,14 @@ public class AdminDashboardService {
 		if (o == null) {
 			return null;
 		}
-		if (o instanceof LocalDate ld) {
-			return ld;
+		if (o instanceof LocalDate) {
+			return (LocalDate) o;
 		}
-		if (o instanceof Date sd) {
-			return sd.toLocalDate();
+		if (o instanceof java.sql.Date) {
+			return ((java.sql.Date) o).toLocalDate();
 		}
-		if (o instanceof java.util.Date ud) {
-			return new Date(ud.getTime()).toLocalDate();
+		if (o instanceof java.util.Date) {
+			return new java.sql.Date(((java.util.Date) o).getTime()).toLocalDate();
 		}
 		String s = o.toString();
 		if (s.length() >= 10) {

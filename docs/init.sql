@@ -29,6 +29,7 @@ CREATE TABLE `sys_user` (
   `avatar` varchar(255) DEFAULT '' COMMENT '头像URL',
   `email` varchar(100) DEFAULT '' COMMENT '邮箱',
   `phone` varchar(20) DEFAULT '' COMMENT '手机号',
+  `qq` varchar(20) DEFAULT '' COMMENT 'QQ 号（选填）',
   
   -- AIGC 核心业务资产
   `points` int NOT NULL DEFAULT '0' COMMENT '音乐积分余额 (生成音乐扣除)',
@@ -202,7 +203,10 @@ CREATE TABLE `music_like` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='音乐点赞表';
 
 -- ---------------------------------------------------------------------------
--- 以下为「已有库增量」备忘：若在增加 vendor_task_id 字段前已初始化过库，按需执行：
+-- 以下为「已有库增量」备忘：若在增加 qq 等字段前已初始化过库，按需执行：
+-- ALTER TABLE `sys_user` ADD COLUMN `qq` varchar(20) DEFAULT '' COMMENT 'QQ 号（选填）' AFTER `phone`;
+--
+-- 若在增加 vendor_task_id 字段前已初始化过库，按需执行：
 -- ALTER TABLE `music_task` ADD COLUMN `vendor_task_id` varchar(128) DEFAULT NULL COMMENT '第三方任务号（SunoAPI 等）' AFTER `task_id`;
 -- ALTER TABLE `music_task` ADD KEY `idx_vendor_task_id` (`vendor_task_id`);
 --

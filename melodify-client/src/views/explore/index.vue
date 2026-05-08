@@ -16,6 +16,7 @@ import { downloadAudioByFileUrl } from '@/utils/downloadAudio'
 import { exploreItemPlaySubtitle } from '@/utils/exploreDisplay'
 import { extractTrackLyrics } from '@/utils/trackLyrics'
 import { showSubmitError } from '@/utils/showSubmitError'
+import LikeHeartIcon from '@/components/LikeHeartIcon.vue'
 
 defineOptions({ name: 'ExplorePage' })
 
@@ -188,8 +189,8 @@ onMounted(() => void fetchList())
           <el-option :value="24" label="每页 24 条" />
           <el-option :value="36" label="每页 36 条" />
         </el-select>
-        <el-button type="primary" :loading="loading" @click="applySearch">搜索</el-button>
-        <el-button :loading="loading" @click="fetchList">刷新</el-button>
+        <el-button type="primary" :disabled="loading" @click="applySearch">搜索</el-button>
+        <el-button :disabled="loading" @click="fetchList">刷新</el-button>
       </div>
     </section>
 
@@ -213,7 +214,7 @@ onMounted(() => void fetchList())
           <div class="explore-card__meta">
             <span>{{ item.durationSec ?? 0 }} 秒</span>
             <span class="meta-likes">
-              <span class="like-dot" :class="{ 'like-dot--on': item.liked }" aria-hidden="true" />
+              <LikeHeartIcon class="meta-likes__heart" :filled="item.liked" :size="14" />
               {{ item.likeCount }} 赞
             </span>
           </div>
@@ -225,12 +226,15 @@ onMounted(() => void fetchList())
             <template v-if="isAuthenticated">
               <el-button
                 size="small"
-                link
-                :type="item.liked ? 'primary' : 'default'"
+                text
+                circle
+                class="explore-like-btn"
+                :aria-label="item.liked ? '取消点赞' : '点赞'"
+                :aria-pressed="item.liked"
                 :loading="likeBusyId === item.id"
                 @click="toggleLike(item)"
               >
-                {{ item.liked ? '已赞' : '点赞' }}
+                <LikeHeartIcon :filled="item.liked" :size="18" />
               </el-button>
             </template>
             <RouterLink v-else class="like-login-hint" to="/login?redirect=/explore">登录后点赞</RouterLink>
@@ -319,6 +323,13 @@ onMounted(() => void fetchList())
   letter-spacing: -0.02em;
 }
 
+.explore-card__body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
 .explore-card__body h2 {
   margin: 0;
   font-size: 0.9375rem;
@@ -334,6 +345,7 @@ onMounted(() => void fetchList())
   line-height: 1.5;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -354,23 +366,27 @@ onMounted(() => void fetchList())
   gap: 0.35rem;
 }
 
-.like-dot {
-  width: 0.35rem;
-  height: 0.35rem;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--melodify-muted) 35%, #ccc4b8);
+.meta-likes__heart {
+  flex-shrink: 0;
+  transform: translateY(0.5px);
 }
 
-.like-dot--on {
-  background: var(--el-color-primary);
+/* 圆形仅图标，与左侧「播放/下载」small 按钮视觉高度对齐 */
+.explore-like-btn {
+  flex-shrink: 0;
+}
+
+.explore-like-btn :deep(.el-icon),
+.explore-like-btn :deep(svg) {
+  vertical-align: middle;
 }
 
 .explore-card__actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.25rem 0.75rem;
   align-items: center;
-  margin-top: 0.65rem;
+  gap: 0.5rem 0.65rem;
+  margin-top: 0.75rem;
 }
 
 .like-login-hint {
@@ -426,13 +442,20 @@ onMounted(() => void fetchList())
   align-items: center;
 }
 
+/* 搜索框在整行 flex 中不被两侧控件挤缩；换行时单独占满一行更稳 */
 .explore-search {
-  flex: 1 1 200px;
+  flex: 1 1 220px;
   min-width: min(100%, 220px);
+  flex-shrink: 0;
 }
 
 .explore-sort,
 .explore-pagesize {
+  flex-shrink: 0;
   width: 132px;
+}
+
+.explore-toolbar :deep(.el-button) {
+  flex-shrink: 0;
 }
 </style>

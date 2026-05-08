@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * 首页：产品与入口；作品广场仅在导航与底部卡片进入。
+ * 首页：Hero、入口卡片；原独立「关于」页内容合并为 #product-about 区块。
  */
 import { storeToRefs } from 'pinia'
 import { RouterLink, useRouter } from 'vue-router'
@@ -52,7 +52,7 @@ const goLogin = () => router.push('/login')
         </div>
 
         <p class="hero__fineprint">
-          <RouterLink to="/about">产品说明</RouterLink>
+          <a href="#product-about">产品说明</a>
           <span aria-hidden="true"> · </span>
           <RouterLink to="/explore">广场</RouterLink>
           <template v-if="isAuthenticated">
@@ -84,23 +84,54 @@ const goLogin = () => router.push('/login')
       </div>
     </section>
 
-    <section class="foot-strip" aria-label="入口">
-      <RouterLink class="foot-strip__link soft-card" to="/generate">
-        <span class="foot-strip__icon">01</span>
-        <span class="foot-strip__k">创作</span>
-        <span class="foot-strip__v">简单模式与自定义歌词</span>
-      </RouterLink>
-      <RouterLink class="foot-strip__link soft-card" to="/explore">
-        <span class="foot-strip__icon">02</span>
-        <span class="foot-strip__k">广场</span>
-        <span class="foot-strip__v">浏览公开发布的作品</span>
-      </RouterLink>
-      <RouterLink class="foot-strip__link soft-card" to="/about">
-        <span class="foot-strip__icon">03</span>
-        <span class="foot-strip__k">帮助</span>
-        <span class="foot-strip__v">计费与能力说明</span>
-      </RouterLink>
-    </section>
+    <div class="home-lower">
+      <section class="foot-strip" aria-label="入口">
+        <RouterLink class="foot-strip__link soft-card" to="/generate">
+          <span class="foot-strip__icon">01</span>
+          <span class="foot-strip__k">创作</span>
+          <span class="foot-strip__v">简单模式与自定义歌词</span>
+        </RouterLink>
+        <RouterLink class="foot-strip__link soft-card" to="/explore">
+          <span class="foot-strip__icon">02</span>
+          <span class="foot-strip__k">广场</span>
+          <span class="foot-strip__v">浏览公开发布的作品</span>
+        </RouterLink>
+        <RouterLink class="foot-strip__link soft-card" to="/recharge">
+          <span class="foot-strip__icon">03</span>
+          <span class="foot-strip__k">积分</span>
+          <span class="foot-strip__v">充值额度与点数</span>
+        </RouterLink>
+      </section>
+
+      <section
+        id="product-about"
+        class="home-about"
+        aria-labelledby="home-about-title"
+        tabindex="-1"
+      >
+        <header class="home-about__intro">
+          <p class="page-eyebrow">关于产品</p>
+          <h2 id="home-about-title" class="page-title page-title--lg">面向灵感捕捉的 AI 音乐工作台</h2>
+          <p class="page-desc home-about__lead">
+            Melodify 面向音乐创作者与爱好者，结合 AIGC 能力辅助完成灵感落地、任务追踪与作品管理。
+          </p>
+        </header>
+        <div class="section-grid section-grid--3 home-about__grid">
+          <section class="soft-card home-about__card">
+            <h3>当前能力</h3>
+            <p>账号注册登录、积分扣费、AI 生成任务、作品库试听、失败自动退费。</p>
+          </section>
+          <section class="soft-card home-about__card">
+            <h3>适合场景</h3>
+            <p>歌曲 demo、短视频配乐、风格草稿、歌词旋律灵感探索。</p>
+          </section>
+          <section class="soft-card home-about__card">
+            <h3>后续计划</h3>
+            <p>收藏夹、标签、批量生成、作品发布、Webhook 回调和自有存储。</p>
+          </section>
+        </div>
+      </section>
+    </div>
   </div>
 </template>
 
@@ -109,8 +140,74 @@ const goLogin = () => router.push('/login')
   padding-top: 0.35rem;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  padding-bottom: 0.5rem;
+  gap: 1.35rem;
+  padding-bottom: 1.25rem;
+}
+
+.home-lower {
+  display: flex;
+  flex-direction: column;
+  gap: 1.65rem;
+  padding-top: 0.2rem;
+}
+
+.home-about {
+  scroll-margin-top: 5.5rem;
+  padding: clamp(1.35rem, 3.2vw, 1.85rem) clamp(1.25rem, 3vw, 1.75rem);
+  border-radius: var(--melodify-radius-lg);
+  border: 1px solid var(--melodify-divider-strong);
+  background: color-mix(in srgb, var(--melodify-surface-muted) 72%, transparent);
+}
+
+.home-about__intro {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 1.2rem;
+}
+
+.home-about__intro .page-eyebrow {
+  margin: 0;
+}
+
+.home-about__intro .page-title {
+  margin: 0;
+}
+
+.home-about__lead {
+  max-width: 48rem;
+  font-size: 1.02rem;
+  margin: 0.15rem 0 0;
+  line-height: 1.65;
+}
+
+.home-about__grid {
+  margin-top: 0;
+}
+
+.home-about__card {
+  padding: 1.25rem;
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.home-about__card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--melodify-shadow-hover);
+}
+
+.home-about__card h3 {
+  color: var(--melodify-classical-ink, var(--melodify-strong));
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0 0 0.45rem;
+}
+
+.home-about__card p {
+  margin: 0;
+  color: var(--melodify-muted);
+  line-height: 1.7;
 }
 
 .hero {

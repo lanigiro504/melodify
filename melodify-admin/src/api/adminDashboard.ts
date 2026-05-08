@@ -10,7 +10,6 @@ export interface AdminDashboardSummary {
   rechargeOrdersPaidTodayCount: number
   rechargePaidTodayCentTotal: number
   rechargePaidTodayYuanApprox: number
-  publicAssetsTotal: number
 }
 
 export interface MusicTaskStatusCount {

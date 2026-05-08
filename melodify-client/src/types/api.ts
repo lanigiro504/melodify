@@ -20,6 +20,7 @@ export interface SysUser {
   avatar?: string | null
   email?: string | null
   phone?: string | null
+  qq?: string | null
   points?: number | null
   roleId?: number | null
   status?: number | null
@@ -85,6 +86,7 @@ export interface UserProfileBody {
   avatar?: string
   email?: string
   phone?: string
+  qq?: string
 }
 
 export interface PointProduct {

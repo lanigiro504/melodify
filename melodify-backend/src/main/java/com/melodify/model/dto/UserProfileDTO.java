@@ -20,4 +20,7 @@ public class UserProfileDTO {
 
 	@Size(max = 20)
 	private String phone;
+
+	@Size(max = 20)
+	private String qq;
 }

@@ -1,10 +1,9 @@
 package com.melodify;
 
+import com.melodify.support.AbstractMysqlIntegrationTest;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
-class MelodifyBackendApplicationTests {
+class MelodifyBackendApplicationTests extends AbstractMysqlIntegrationTest {
 
 	@Test
 	void contextLoads() {

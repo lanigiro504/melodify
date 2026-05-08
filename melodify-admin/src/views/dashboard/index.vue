@@ -328,7 +328,7 @@ onUnmounted(() => {
         <div class="metric-icon bad">
           <el-icon><CircleCloseFilled /></el-icon>
         </div>
-        <div>
+        <div> 
           <p class="metric-label">今日失败</p>
           <strong class="metric-value">{{ data.musicTasksTodayFailed }}</strong>
         </div>
@@ -340,12 +340,6 @@ onUnmounted(() => {
           <span class="metric-sub">
             {{ data.rechargePaidTodayCentTotal }} 分 · 订单 {{ data.rechargeOrdersPaidTodayCount }} 笔
           </span>
-        </div>
-      </el-card>
-      <el-card class="metric wide" shadow="never">
-        <div>
-          <p class="metric-label">公开作品总数</p>
-          <strong class="metric-value">{{ data.publicAssetsTotal }}</strong>
         </div>
       </el-card>
     </div>

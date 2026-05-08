@@ -29,6 +29,8 @@ public class SysUser {
 
 	private String phone;
 
+	private String qq;
+
 	private Integer points;
 
 	private Long roleId;

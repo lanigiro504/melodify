@@ -29,12 +29,14 @@ const profileForm = reactive({
   nickname: '',
   email: '',
   phone: '',
+  qq: '',
 })
 
 const profileRules: FormRules = {
   nickname: [{ max: 50, message: '昵称最多 50 个字符', trigger: 'blur' }],
   email: [{ max: 100, message: '邮箱最多 100 个字符', trigger: 'blur' }],
   phone: [{ max: 20, message: '手机号最多 20 个字符', trigger: 'blur' }],
+  qq: [{ max: 20, message: 'QQ 号最多 20 个字符', trigger: 'blur' }],
 }
 
 watch(
@@ -43,6 +45,7 @@ watch(
     profileForm.nickname = user?.nickname ?? ''
     profileForm.email = user?.email ?? ''
     profileForm.phone = user?.phone ?? ''
+    profileForm.qq = user?.qq ?? ''
   },
   { immediate: true },
 )
@@ -72,6 +75,7 @@ const saveProfile = async () => {
       nickname: profileForm.nickname.trim(),
       email: profileForm.email.trim(),
       phone: profileForm.phone.trim(),
+      qq: profileForm.qq.trim(),
     })
   } catch (e) {
     showSubmitError(e, '保存资料失败')
@@ -176,7 +180,7 @@ void auth.refreshMe().catch(() => {})
             >
               <span v-if="!asideAvatarSrc" class="aside-avatar-letter">{{ auth.avatarText }}</span>
               <span v-if="!avatarUploading" class="aside-avatar-overlay" aria-hidden="true">
-                <span class="aside-avatar-pill">
+                <span class="aside-avatar-chip">
                   <el-icon class="aside-avatar-cam"><Camera /></el-icon>
                   <span class="aside-avatar-overlay-text">更换</span>
                 </span>
@@ -243,6 +247,9 @@ void auth.refreshMe().catch(() => {})
                 </el-form-item>
                 <el-form-item label="手机" prop="phone">
                   <el-input v-model="profileForm.phone" placeholder="选填" maxlength="20" clearable />
+                </el-form-item>
+                <el-form-item label="QQ" prop="qq">
+                  <el-input v-model="profileForm.qq" placeholder="选填" maxlength="20" clearable />
                 </el-form-item>
                 <div class="full-span form-actions">
                   <el-button type="primary" :loading="savingProfile" @click="saveProfile">保存资料</el-button>
@@ -471,10 +478,12 @@ void auth.refreshMe().catch(() => {})
 
 .aside-avatar-overlay {
   position: absolute;
-  left: 50%;
-  bottom: 10%;
+  right: 0.2rem;
+  bottom: 0.2rem;
+  left: auto;
   z-index: 2;
-  transform: translateX(-50%) translateY(6px);
+  max-width: calc(100% - 0.5rem);
+  transform: translateY(4px);
   opacity: 0;
   pointer-events: none;
   transition:
@@ -482,38 +491,55 @@ void auth.refreshMe().catch(() => {})
     transform 0.24s cubic-bezier(0.34, 1.2, 0.64, 1);
 }
 
-.aside-avatar-pill {
+/* 深色磨砂小条：在浅色占位图与实拍照上对比都更清晰，避免大白块贴底割裂感 */
+.aside-avatar-chip {
   display: inline-flex;
   align-items: center;
-  gap: 0.2rem;
-  padding: 0.28rem 0.5rem 0.26rem;
+  justify-content: center;
+  gap: 0.22rem;
+  padding: 0.3rem 0.5rem 0.3rem 0.42rem;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.94);
-  border: 1px solid rgba(255, 255, 255, 0.95);
+  background: rgba(15, 23, 42, 0.78);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.14);
   box-shadow:
-    0 1px 4px rgba(15, 23, 42, 0.08),
-    0 4px 14px rgba(15, 23, 42, 0.06);
+    0 1px 2px rgba(0, 0, 0, 0.08),
+    0 6px 16px rgba(0, 0, 0, 0.18);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
 }
 
 .aside-avatar-cam {
+  flex-shrink: 0;
   font-size: 0.8125rem;
-  color: var(--melodify-muted);
+  color: rgba(255, 255, 255, 0.96);
 }
 
 .aside-avatar:hover .aside-avatar-overlay,
 .aside-avatar:focus-visible .aside-avatar-overlay {
   opacity: 1;
-  transform: translateX(-50%) translateY(0);
+  transform: translateY(0);
 }
 
 .aside-avatar-overlay-text {
-  font-size: 0.625rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: var(--melodify-strong);
+  flex-shrink: 0;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.98);
   line-height: 1;
+  white-space: nowrap;
+}
+
+@media (max-width: 380px) {
+  .aside-avatar-overlay-text {
+    display: none;
+  }
+
+  .aside-avatar-chip {
+    padding: 0.38rem;
+    border-radius: 50%;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -529,7 +555,7 @@ void auth.refreshMe().catch(() => {})
   }
 
   .aside-avatar-overlay {
-    transform: translateX(-50%);
+    transform: none;
   }
 }
 

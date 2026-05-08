@@ -10,6 +10,7 @@ import type { MusicAssetDetail } from '@/types/musicAsset'
 import { unwrapResult } from '@/utils/apiResult'
 import { downloadAudioByFileUrl } from '@/utils/downloadAudio'
 import { showSubmitError } from '@/utils/showSubmitError'
+import LikeHeartIcon from '@/components/LikeHeartIcon.vue'
 
 defineOptions({ name: 'WorkDetailPage' })
 
@@ -198,8 +199,9 @@ onMounted(() => void fetchDetail())
       <div class="detail-actions">
         <RouterLink to="/works" class="ghost-link">返回作品库</RouterLink>
         <el-button round @click="recreate">复用参数再创作</el-button>
-        <el-button type="primary" round :loading="liking" @click="toggleLike">
-          {{ detail?.liked ? '已点赞' : '点赞' }} · {{ detail?.likeCount ?? 0 }}
+        <el-button round :loading="liking" @click="toggleLike" class="detail-like-btn">
+          <LikeHeartIcon :filled="Boolean(detail?.liked)" :size="20" />
+          <span>{{ detail?.likeCount ?? 0 }}</span>
         </el-button>
       </div>
     </section>
@@ -280,6 +282,14 @@ onMounted(() => void fetchDetail())
   align-items: center;
   flex-wrap: wrap;
   gap: 0.75rem;
+}
+
+.detail-like-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 .ghost-link {

@@ -14,6 +14,7 @@ export interface SysUser {
   avatar?: string | null
   email?: string | null
   phone?: string | null
+  qq?: string | null
   points?: number | null
   roleId?: number | null
   status?: number | null

@@ -159,8 +159,7 @@ async function downloadPreview(task: MusicTask) {
         <p class="page-eyebrow">Library</p>
         <h1 class="page-title page-title--lg">我的作品</h1>
         <p class="page-desc page-desc--wide">
-          按时间倒序列出你的生成任务；完成后可试听（底部播放条）、下载成片或查看详情。成片音频以链接形式存库，文件可能在
-          Suno 侧或由后台镜像到本服务的 <code>/api/media/audio/</code> 目录。
+          按时间倒序列出生成任务；完成后可试听（底部播放条）、下载成片或查看详情。
         </p>
       </div>
       <div class="head-actions">

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CaretLeft, CaretRight, Close, VideoPause, VideoPlay } from '@element-plus/icons-vue'
+import { CaretLeft, CaretRight, Close } from '@element-plus/icons-vue'
 import { storeToRefs } from 'pinia'
 import { computed, nextTick, ref, watch } from 'vue'
 import { usePlayerStore } from '@/stores/player'
@@ -24,20 +24,6 @@ const lyricLines = computed(() => {
   return splitLyricLines(raw)
 })
 
-const activeLineIndex = computed(() => {
-  const lines = lyricLines.value
-  const n = lines.length
-  if (!n) return -1
-  let d = mediaDuration.value
-  if (!d || !Number.isFinite(d) || d <= 0) {
-    const hint = current.value?.durationSec
-    if (hint != null && hint > 0) d = hint
-  }
-  if (!d || d <= 0) return 0
-  const ratio = Math.min(1, Math.max(0, currentTime.value / d))
-  return Math.min(n - 1, Math.floor(ratio * n))
-})
-
 const fmtTime = (s: number) => {
   if (!Number.isFinite(s) || s < 0) return '0:00'
   const m = Math.floor(s / 60)
@@ -45,12 +31,43 @@ const fmtTime = (s: number) => {
   return `${m}:${sec.toString().padStart(2, '0')}`
 }
 
+/** 有效总时长（与元数据同步的 mediaDuration → audio → hint） */
+const totalDurationSec = computed(() => {
+  if (mediaDuration.value > 0 && Number.isFinite(mediaDuration.value)) {
+    return mediaDuration.value
+  }
+  const el = audioRef.value
+  if (el && Number.isFinite(el.duration) && el.duration > 0) {
+    return el.duration
+  }
+  const hint = current.value?.durationSec
+  if (hint != null && Number(hint) > 0) {
+    return Number(hint)
+  }
+  return 0
+})
+
+const activeLineIndex = computed(() => {
+  const lines = lyricLines.value
+  const n = lines.length
+  if (!n) return -1
+  const d = totalDurationSec.value
+  if (!d || d <= 0) return 0
+  const ratio = Math.min(1, Math.max(0, currentTime.value / d))
+  return Math.min(n - 1, Math.floor(ratio * n))
+})
+
 const elapsedLabel = computed(() => fmtTime(currentTime.value))
-const durationLabel = computed(() => fmtTime(mediaDuration.value))
+const durationLabel = computed(() => {
+  const d = totalDurationSec.value
+  if (!d || d <= 0) return '--:--'
+  return fmtTime(d)
+})
 
 const progressPercent = computed(() => {
-  if (!mediaDuration.value) return 0
-  return Math.min(100, Math.max(0, (currentTime.value / mediaDuration.value) * 100))
+  const d = totalDurationSec.value
+  if (!d) return 0
+  return Math.min(100, Math.max(0, (currentTime.value / d) * 100))
 })
 
 const syncPlayback = async () => {
@@ -128,16 +145,17 @@ function onLoadedMetadata(e: Event) {
 
 function seekRatio(ratio: number) {
   const el = audioRef.value
-  if (!el || !mediaDuration.value) return
+  const dur = totalDurationSec.value
+  if (!el || !dur) return
   const r = Math.min(1, Math.max(0, ratio))
-  el.currentTime = r * mediaDuration.value
+  el.currentTime = r * dur
   currentTime.value = el.currentTime
 }
 
 function skipBy(deltaSec: number) {
   const el = audioRef.value
   if (!el) return
-  let dur = mediaDuration.value
+  let dur = totalDurationSec.value
   if (!dur || dur <= 0) {
     const d = el.duration
     dur = Number.isFinite(d) && d > 0 ? d : 0
@@ -161,11 +179,8 @@ function skipBy(deltaSec: number) {
         @loadedmetadata="onLoadedMetadata"
       />
 
-      <!-- 歌词层叠在底栏之上，独立于底栏裁剪 -->
-      <div
-        v-if="lyricLines.length && lyricsExpanded"
-        class="dock-lyrics melodify-glass-card"
-      >
+      <!-- 歌词层叠在底栏之上 -->
+      <div v-if="lyricLines.length && lyricsExpanded" class="dock-lyrics melodify-glass-card">
         <p class="dock-lyrics__hint">歌词预览 · 无时间轴时按进度粗略同步</p>
         <div ref="lyricsScrollRef" class="dock-lyrics__scroll">
           <p
@@ -182,8 +197,8 @@ function skipBy(deltaSec: number) {
 
       <section class="dock-bar" aria-label="全局播放器">
         <!-- 顶部：时间与进度在同一窄带内，避免与封面行挤压 -->
-        <div v-if="mediaDuration > 0" class="dock-progress">
-          <span class="dock-time">{{ elapsedLabel }}</span>
+        <div v-if="totalDurationSec > 0" class="dock-progress">
+          <span class="dock-time dock-time--elapsed">{{ elapsedLabel }}</span>
           <div class="dock-track-hit">
             <div class="dock-track">
               <div class="dock-track__fill" :style="{ transform: `scaleX(${progressPercent / 100})` }" />
@@ -195,11 +210,11 @@ function skipBy(deltaSec: number) {
               max="1000"
               step="1"
               aria-label="播放进度"
-              :value="Math.round((currentTime / mediaDuration) * 1000)"
+              :value="Math.round((currentTime / totalDurationSec) * 1000)"
               @input="seekRatio(Number(($event.target as HTMLInputElement).value) / 1000)"
             />
           </div>
-          <span class="dock-time">{{ durationLabel }}</span>
+          <span class="dock-time dock-time--total">{{ durationLabel }}</span>
         </div>
 
         <div class="dock-main">
@@ -217,19 +232,22 @@ function skipBy(deltaSec: number) {
           </div>
 
           <div class="dock-transport" aria-label="播放控制">
-            <button type="button" class="dock-icon-btn" aria-label="后退10秒" @click="skipBy(-10)">
-              <el-icon><CaretLeft /></el-icon>
-              <span class="dock-icon-btn__cap">10s</span>
+            <button type="button" class="dock-skip" title="后退 10 秒" aria-label="后退10秒" @click="skipBy(-10)">
+              <el-icon :size="20"><CaretLeft /></el-icon>
             </button>
 
-            <button type="button" class="dock-play" @click="player.setPaused(!paused)">
-              <el-icon v-if="paused" :size="28"><VideoPlay /></el-icon>
-              <el-icon v-else :size="28"><VideoPause /></el-icon>
+            <button
+              type="button"
+              class="dock-play"
+              :aria-label="paused ? '播放' : '暂停'"
+              @click="player.setPaused(!paused)"
+            >
+              <span v-if="paused" class="dock-play__glyph dock-play__glyph--play" aria-hidden="true" />
+              <span v-else class="dock-play__glyph dock-play__glyph--pause" aria-hidden="true" />
             </button>
 
-            <button type="button" class="dock-icon-btn" aria-label="前进10秒" @click="skipBy(10)">
-              <span class="dock-icon-btn__cap">10s</span>
-              <el-icon><CaretRight /></el-icon>
+            <button type="button" class="dock-skip" title="前进 10 秒" aria-label="前进10秒" @click="skipBy(10)">
+              <el-icon :size="20"><CaretRight /></el-icon>
             </button>
           </div>
 
@@ -276,7 +294,7 @@ function skipBy(deltaSec: number) {
   display: none;
 }
 
-/* ——歌词面板（在底栏外，不参与底栏 overflow 裁剪） */
+/* ——歌词 */
 .dock-lyrics {
   width: min(640px, calc(100vw - 28px));
   padding: 0.75rem 1rem 0.95rem;
@@ -317,7 +335,7 @@ function skipBy(deltaSec: number) {
   background: color-mix(in srgb, var(--el-color-primary-light-9) 88%, transparent);
 }
 
-/* ——底栏 Spotify 式实心块（圆角 capsule） */
+/* ——底栏（浅色 + 主色） */
 .dock-bar {
   width: min(640px, calc(100vw - 28px));
   box-sizing: border-box;
@@ -325,8 +343,9 @@ function skipBy(deltaSec: number) {
   border: 1px solid rgba(0, 0, 0, 0.09);
   border-radius: var(--melodify-radius-lg);
   box-shadow:
-    0 10px 40px rgba(0, 0, 0, 0.1),
-    0 4px 12px rgba(0, 0, 0, 0.04);
+    0 1px 0 rgba(255, 255, 255, 0.95) inset,
+    0 10px 36px rgba(0, 0, 0, 0.09),
+    0 2px 8px rgba(0, 0, 0, 0.04);
   backdrop-filter: saturate(140%) blur(18px);
   overflow: hidden;
   isolation: isolate;
@@ -335,21 +354,26 @@ function skipBy(deltaSec: number) {
 .dock-progress {
   display: flex;
   align-items: center;
-  gap: 0.62rem;
-  padding: 0.55rem 0.95rem 0.35rem;
+  gap: 0.52rem;
+  padding: 0.4rem 0.95rem 0.32rem;
   border-bottom: 1px solid var(--melodify-divider, rgba(0, 0, 0, 0.06));
 }
 
 .dock-time {
   flex: none;
-  width: 2.85rem;
-  font-size: 0.688rem;
+  width: 2.72rem;
+  font-size: 0.7rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  color: var(--melodify-muted);
 }
 
-.dock-time:last-child {
+.dock-time--elapsed {
+  color: var(--melodify-strong);
+  text-align: left;
+}
+
+.dock-time--total {
+  color: var(--melodify-muted);
   text-align: right;
 }
 
@@ -357,7 +381,7 @@ function skipBy(deltaSec: number) {
   position: relative;
   flex: 1;
   min-width: 0;
-  height: 1.65rem;
+  height: 1.35rem;
   display: flex;
   align-items: center;
   cursor: pointer;
@@ -365,9 +389,8 @@ function skipBy(deltaSec: number) {
   outline: none;
 }
 
-.dock-track-hit:focus-within {
-  box-shadow: 0 0 0 2px var(--el-color-primary-light-7);
-  border-radius: 999px;
+.dock-track-hit:focus-visible {
+  box-shadow: 0 0 0 2px rgba(var(--melodify-primary-rgb), 0.22);
 }
 
 .dock-track {
@@ -375,10 +398,10 @@ function skipBy(deltaSec: number) {
   left: 0;
   right: 0;
   top: 50%;
-  height: 5px;
-  margin-top: -2.5px;
+  height: 4px;
+  margin-top: -2px;
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.09);
+  background: rgba(0, 0, 0, 0.08);
   overflow: hidden;
 }
 
@@ -387,15 +410,10 @@ function skipBy(deltaSec: number) {
   inset: 0;
   border-radius: inherit;
   transform-origin: left center;
-  background: linear-gradient(
-    90deg,
-    var(--el-color-primary-light-7),
-    var(--el-color-primary)
-  );
+  background: var(--el-color-primary);
   will-change: transform;
 }
 
-/* 透明 range 叠在轨道上，拖拽命中区大且不「画出界」 */
 .dock-range {
   position: absolute;
   inset: 0;
@@ -411,9 +429,9 @@ function skipBy(deltaSec: number) {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto auto;
   align-items: center;
-  gap: 0.65rem;
-  padding: 0.7rem 0.95rem 0.85rem;
-  min-height: 3.85rem;
+  gap: 0.7rem;
+  padding: 0.65rem 0.95rem 0.78rem;
+  min-height: 3.65rem;
 }
 
 .dock-cover-wrap {
@@ -421,34 +439,32 @@ function skipBy(deltaSec: number) {
 }
 
 .dock-cover {
-  width: 3.1rem;
-  height: 3.1rem;
+  width: 3rem;
+  height: 3rem;
   border-radius: 10px;
   display: grid;
   place-items: center;
-  font-size: 1.2rem;
+  font-size: 1.12rem;
   font-weight: 800;
   color: #fff;
   background:
-    radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.3) 0 45%, transparent 46%),
-    linear-gradient(145deg, var(--el-color-primary-light-5), var(--el-color-primary));
-  box-shadow: 0 4px 14px rgba(var(--melodify-primary-rgb), 0.32);
+    radial-gradient(ellipse 80% 65% at 30% 18%, rgba(255, 255, 255, 0.28) 0%, transparent 52%),
+    linear-gradient(150deg, var(--el-color-primary-light-5), var(--el-color-primary));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 2px 8px rgba(var(--melodify-primary-rgb), 0.22);
 }
 
 .dock-cover--live {
   box-shadow:
-    0 4px 16px rgba(var(--melodify-primary-rgb), 0.35),
-    0 0 0 2px color-mix(in srgb, var(--el-color-primary-light-9) 70%, transparent);
-}
-
-.dock-info {
-  min-width: 0;
-  flex: none;
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    0 3px 12px rgba(var(--melodify-primary-rgb), 0.26),
+    0 0 0 1px rgba(var(--melodify-primary-rgb), 0.16);
 }
 
 .dock-title {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 0.875rem;
   font-weight: 700;
   color: var(--melodify-strong);
   line-height: 1.3;
@@ -459,76 +475,114 @@ function skipBy(deltaSec: number) {
 
 .dock-sub {
   margin: 0.1rem 0 0;
-  font-size: 0.75rem;
+  font-size: 0.73rem;
   color: var(--melodify-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+.dock-info {
+  min-width: 0;
+}
+
 .dock-transport {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.35rem;
   flex-shrink: 0;
 }
 
+/* 主键：扁平实心圆 + 纯形状图标（无 Element「带圈」视频图标） */
 .dock-play {
-  width: 3rem;
-  height: 3rem;
+  width: 2.65rem;
+  height: 2.65rem;
   border-radius: 50%;
+  border: none;
+  margin: 0 0.15rem;
+  padding: 0;
   display: grid;
   place-items: center;
-  border: none;
   cursor: pointer;
-  color: #fff;
   background: var(--el-color-primary);
-  box-shadow: 0 6px 16px rgba(var(--melodify-primary-rgb), 0.3);
-  transition:
-    transform 0.12s ease,
-    background-color 0.15s ease;
+  transition: opacity 0.12s ease, transform 0.1s ease;
+}
+
+.dock-play__glyph {
+  display: block;
+  flex-shrink: 0;
+}
+
+/* 三角播放：clip-path 比 border 三角更易对齐 */
+.dock-play__glyph--play {
+  width: 0.55rem;
+  height: 0.7rem;
+  margin-left: 0.12rem;
+  background: #fff;
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+}
+
+/* 暂停：双竖条（整像素 + flex 间距，避免 rem 亚像素导致左右粗细不一） */
+.dock-play__glyph--pause {
+  display: inline-flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: 5px;
+  width: 11px;
+  height: 12px;
+  box-sizing: border-box;
+}
+
+.dock-play__glyph--pause::before,
+.dock-play__glyph--pause::after {
+  content: '';
+  flex: 0 0 3px;
+  width: 3px;
+  min-width: 3px;
+  border-radius: 0;
+  background: #fff;
 }
 
 .dock-play:hover {
-  transform: scale(1.06);
-  background-color: color-mix(in srgb, var(--el-color-primary) 88%, black);
+  opacity: 0.92;
 }
 
 .dock-play:active {
-  transform: scale(0.98);
+  opacity: 0.88;
+  transform: scale(0.97);
 }
 
-.dock-icon-btn {
-  height: 2.65rem;
-  min-width: 2.95rem;
-  padding: 0 0.4rem;
-  border-radius: 999px;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  background: rgba(245, 245, 246, 0.95);
-  color: var(--melodify-strong);
+/* 次键：仅图标，浅灰 → 主色 */
+.dock-skip {
+  width: 2.35rem;
+  height: 2.35rem;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--melodify-muted);
   cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  font-size: 0.625rem;
-  font-weight: 800;
+  display: grid;
+  place-items: center;
+  transition:
+    color 0.12s ease,
+    background 0.12s ease;
 }
 
-.dock-icon-btn:hover {
-  background: rgba(237, 237, 240, 1);
+.dock-skip:hover {
+  color: var(--el-color-primary);
+  background: var(--el-color-primary-light-9);
 }
 
-.dock-icon-btn__cap {
-  font-variant-numeric: tabular-nums;
-  opacity: 0.85;
-  letter-spacing: -0.02em;
+.dock-skip:active {
+  background: color-mix(in srgb, var(--el-color-primary-light-9) 85%, var(--el-color-primary));
 }
 
 .dock-tools {
   display: inline-flex;
   align-items: center;
-  gap: 0.2rem;
+  gap: 0.15rem;
 }
 
 .dock-tool-text {
@@ -547,18 +601,18 @@ function skipBy(deltaSec: number) {
 }
 
 .dock-close {
-  width: 2.35rem;
-  height: 2.35rem;
+  width: 2.15rem;
+  height: 2.15rem;
   border-radius: 50%;
   border: none;
   background: transparent;
-  color: var(--melodify-muted);
+  color: var(--melodify-subtle);
   cursor: pointer;
   display: grid;
   place-items: center;
   transition:
-    background 0.15s ease,
-    color 0.15s ease;
+    background 0.14s ease,
+    color 0.14s ease;
 }
 
 .dock-close:hover {
@@ -568,7 +622,7 @@ function skipBy(deltaSec: number) {
 
 @media (max-width: 520px) {
   .dock-progress {
-    padding-inline: 0.75rem;
+    padding-inline: 0.85rem;
     gap: 0.42rem;
   }
 
@@ -577,11 +631,7 @@ function skipBy(deltaSec: number) {
     flex-wrap: wrap;
     align-items: flex-start;
     gap: 0.5rem 0.6rem;
-    padding: 0.65rem 0.82rem 0.75rem;
-  }
-
-  .dock-cover-wrap {
-    flex: none;
+    padding: 0.6rem 0.82rem 0.72rem;
   }
 
   .dock-info {
@@ -601,22 +651,25 @@ function skipBy(deltaSec: number) {
     width: 100%;
     justify-content: center;
     order: 9;
-    margin-top: 0.08rem;
+    margin-top: 0.06rem;
+    gap: 0.4rem;
   }
 }
 
 @media (max-width: 400px) {
   .dock-time {
-    width: 2.65rem;
+    width: 2.6rem;
     font-size: 0.65rem;
   }
 
-  .dock-icon-btn__cap {
-    display: none;
+  .dock-play {
+    width: 2.5rem;
+    height: 2.5rem;
   }
 
-  .dock-icon-btn {
-    min-width: 2.55rem;
+  .dock-skip {
+    width: 2.2rem;
+    height: 2.2rem;
   }
 }
 </style>

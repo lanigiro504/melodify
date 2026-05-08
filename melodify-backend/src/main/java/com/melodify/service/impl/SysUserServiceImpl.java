@@ -112,7 +112,8 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
 		boolean any = dto.getNickname() != null
 				|| dto.getAvatar() != null
 				|| dto.getEmail() != null
-				|| dto.getPhone() != null;
+				|| dto.getPhone() != null
+				|| dto.getQq() != null;
 		if (!any) {
 			return;
 		}
@@ -122,6 +123,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
 				.set(dto.getAvatar() != null, SysUser::getAvatar, dto.getAvatar())
 				.set(dto.getEmail() != null, SysUser::getEmail, dto.getEmail())
 				.set(dto.getPhone() != null, SysUser::getPhone, dto.getPhone())
+				.set(dto.getQq() != null, SysUser::getQq, dto.getQq())
 				.update();
 		if (!ok) {
 			throw new BizException(500, "资料更新失败，请稍后重试");
@@ -177,6 +179,9 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
 		}
 		if (user.getPhone() != null) {
 			user.setPhone(normalize(user.getPhone()));
+		}
+		if (user.getQq() != null) {
+			user.setQq(normalize(user.getQq()));
 		}
 		if (user.getStatus() == null) {
 			user.setStatus(DEFAULT_STATUS_NORMAL);
@@ -235,6 +240,10 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
 		}
 		if (body.getPhone() != null) {
 			uw.set(SysUser::getPhone, normalize(body.getPhone()));
+			any = true;
+		}
+		if (body.getQq() != null) {
+			uw.set(SysUser::getQq, normalize(body.getQq()));
 			any = true;
 		}
 		if (body.getPoints() != null) {

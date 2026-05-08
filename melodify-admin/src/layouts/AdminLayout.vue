@@ -58,7 +58,7 @@ const handleLogout = () => {
         </template>
       </el-menu>
     </el-aside>
-    <el-container>
+    <el-container direction="vertical" class="admin-main-stack">
       <el-header class="header" height="56px">
         <div class="header-left">
           <el-icon class="hdr-icon" aria-hidden="true"><IconMenu /></el-icon>
@@ -69,7 +69,7 @@ const handleLogout = () => {
           <el-button type="primary" link @click="handleLogout">退出</el-button>
         </div>
       </el-header>
-      <el-main class="main">
+      <el-main class="main admin-scroll-main">
         <RouterView />
       </el-main>
     </el-container>
@@ -77,10 +77,29 @@ const handleLogout = () => {
 </template>
 
 <style scoped>
+/* 锁定左侧栏 + 顶栏，仅右侧主内容区滚动，避免整页跟拖 */
 .admin-shell {
-  min-height: 100vh;
+  height: 100vh;
+  max-height: 100vh;
+  width: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
 }
+
+.admin-main-stack {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .aside {
+  flex-shrink: 0;
+  align-self: stretch;
+  height: 100vh;
+  max-height: 100vh;
+  overflow-x: hidden;
+  overflow-y: auto;
   background: var(--admin-sidebar-bg, #141428);
   color: #e2e8f0;
   border-right: 1px solid var(--admin-sidebar-border, rgba(255, 255, 255, 0.06));
@@ -151,6 +170,7 @@ const handleLogout = () => {
 }
 
 .header {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -188,8 +208,13 @@ const handleLogout = () => {
 }
 .main {
   position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   background: transparent;
-  min-height: calc(100vh - 56px);
   padding: 1.15rem clamp(1rem, 2.5vw, 1.5rem) 1.75rem;
 }
 </style>

@@ -11,5 +11,4 @@ public record AdminDashboardSummaryVO(
 		long musicTasksTodayFailed,
 		long rechargeOrdersPaidTodayCount,
 		int rechargePaidTodayCentTotal,
-		BigDecimal rechargePaidTodayYuanApprox,
-		long publicAssetsTotal) {}
+		BigDecimal rechargePaidTodayYuanApprox) {}

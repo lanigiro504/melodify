@@ -55,9 +55,7 @@ const router = createRouter({
     },
     {
       path: '/about',
-      name: 'about',
-      meta: { title: '关于与帮助' },
-      component: () => import('@/views/about/index.vue'),
+      redirect: { path: '/', hash: '#product-about' },
     },
     {
       path: '/login',
@@ -102,8 +100,16 @@ router.beforeEach(async (to: RouteLocationNormalized) => {
 
 router.afterEach((to) => {
   if (typeof window === 'undefined') return
-  window.scrollTo({ top: 0, behavior: 'auto' })
   document.title = composeClientDocumentTitle(to)
+  if (to.hash) {
+    requestAnimationFrame(() => {
+      const id = to.hash.startsWith('#') ? to.hash.slice(1) : to.hash
+      const el = id ? document.getElementById(id) : null
+      el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+  } else {
+    window.scrollTo({ top: 0, behavior: 'auto' })
+  }
 })
 
 export default router

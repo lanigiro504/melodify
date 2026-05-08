@@ -60,6 +60,19 @@ body {
   min-height: 100%;
 }
 
+/* 移动端动态视口；与 AdminLayout 中壳高度配合 */
+@supports (height: 100dvh) {
+  .admin-shell {
+    height: 100dvh;
+    max-height: 100dvh;
+  }
+
+  .admin-shell > .aside {
+    height: 100dvh;
+    max-height: 100dvh;
+  }
+}
+
 /* 表格页统一的白色工作台面板：边框优先、轻投影 */
 .admin-page-board {
   background: var(--admin-surface);

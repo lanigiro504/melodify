@@ -44,6 +44,9 @@ router.beforeEach(async (to: RouteLocationNormalized) => {
 router.afterEach((to) => {
   document.title = composeAdminDocumentTitle(to)
   window.scrollTo({ top: 0, behavior: 'auto' })
+  if (!to.meta.public) {
+    document.querySelector('.admin-scroll-main')?.scrollTo({ top: 0, behavior: 'auto' })
+  }
 })
 
 export default router
