@@ -44,6 +44,7 @@ const formRef = ref<FormInstance>()
 const inspirePresetTab = ref<'rules' | 'full' | 'tags'>('full')
 /** 自定义模式下「风格/标题快选」默认收起，缩短首屏 */
 const customQuickCollapse = ref<string[]>([])
+
 const submitting = ref(false)
 const pollTimer = ref<ReturnType<typeof setInterval> | null>(null)
 
@@ -95,6 +96,10 @@ const applyStyleQuick = (text: string) => {
 
 const applyTitleIdea = (text: string) => {
   form.title = text
+}
+
+function scrollToInspirePanel() {
+  document.getElementById('generate-inspire-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
 const applyLyricSkeleton = (text: string) => {
@@ -452,7 +457,7 @@ const onSubmit = async () => {
             </el-collapse>
           </div>
 
-          <div class="inspire-panel">
+          <div id="generate-inspire-panel" class="inspire-panel">
             <div class="inspire-panel__bar">
               <div class="inspire-panel__bar-row">
                 <span class="inspire-panel__title">灵感预设库</span>
@@ -546,15 +551,35 @@ const onSubmit = async () => {
           </div>
         </section>
 
-        <section class="tips-card melodify-glass-card">
-          <h2>创作建议</h2>
-          <ol>
-            <li>用「灵感预设库」里的<strong>分栏</strong>切换要点、整段与标签，避免长列表拖屏。</li>
-            <li>先写情绪、风格和场景，再补充乐器与人声。</li>
-            <li><strong>简单模式</strong>只有「创作描述」；<strong>自定义 + 人声</strong>请把逐行歌词放在「精确歌词」，与上面的补充描述区分开。</li>
-            <li><strong>自定义 + 纯器乐</strong>只需标题与风格，氛围描述选填。</li>
-            <li>如果失败，系统会自动退回本次生成积分。</li>
-          </ol>
+        <section class="preset-guide-card melodify-glass-card">
+          <h2>预设库速览</h2>
+          <p class="preset-guide__lead">左侧为完整预设区；这里概括各栏用途，需要时点下方跳转。</p>
+          <ul class="preset-guide__list">
+            <li><strong>撰写要点</strong>：简单 / 自定义人声 / 器乐下该怎么写。</li>
+            <li><strong>整段示例</strong>：一键替换当前「创作描述」或器乐氛围。</li>
+            <li><strong>按维度追加</strong>：选标签碎片，逗号接到描述里。</li>
+          </ul>
+          <div v-if="form.customMode" class="preset-guide__custom-flow">
+            <span class="preset-guide__custom-flow-title">自定义 · 建议顺序</span>
+            <ol class="preset-guide__custom-flow-list">
+              <li>
+                <strong>风格 / 标题</strong>必填；可在左侧展开「风格与标题快选」一键填入。
+              </li>
+              <li>
+                勾选<strong>纯器乐</strong>时以氛围描述为主；人声须在<strong>精确歌词</strong>写好内容。
+              </li>
+              <li>
+                需要整段示例或标签片段时，用左侧「灵感预设库」各 Tab（见下方跳转）。
+              </li>
+            </ol>
+          </div>
+          <p v-else class="preset-guide__extra">
+            <strong>简单模式</strong>：只需「创作描述」。有自定义需求可切换到「自定义」。
+          </p>
+          <p class="preset-guide__refund">若生成失败，系统会退还本次扣除的积分。</p>
+          <el-button class="preset-guide__jump" type="primary" link @click="scrollToInspirePanel">
+            定位到左侧预设库
+          </el-button>
         </section>
       </aside>
     </div>
@@ -566,12 +591,13 @@ const onSubmit = async () => {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 22rem;
   gap: 1.1rem;
-  align-items: stretch;
+  /* 避免侧栏被拉满整行高度时在卡片下方留下大块空白（自定义模式左侧更长） */
+  align-items: start;
 }
 
 .composer-card,
 .status-card,
-.tips-card {
+.preset-guide-card {
   padding: 1.35rem;
 }
 
@@ -1101,8 +1127,13 @@ const onSubmit = async () => {
   display: flex;
   flex-direction: column;
   gap: 1.1rem;
-  height: 100%;
-  min-height: 0;
+  position: sticky;
+  /* 与 AppShell 顶部粘性导航错开，长页滚动时侧栏留在视口内 */
+  top: 4.5rem;
+  align-self: start;
+  width: 100%;
+  max-width: 22rem;
+  box-sizing: border-box;
 }
 
 .status-head {
@@ -1112,7 +1143,7 @@ const onSubmit = async () => {
 }
 
 .status-head h2,
-.tips-card h2 {
+.preset-guide-card h2 {
   margin: 0;
   color: var(--melodify-classical-ink, var(--melodify-strong));
   font-size: 1.05rem;
@@ -1190,19 +1221,91 @@ const onSubmit = async () => {
   font-size: 0.875rem;
 }
 
-.tips-card ol {
-  margin: 0.8rem 0 0;
-  padding-left: 1.2rem;
+.preset-guide__lead {
+  margin: 0.65rem 0 0.75rem;
+  font-size: 0.8125rem;
+  line-height: 1.55;
   color: var(--melodify-muted);
 }
 
-.tips-card li + li {
+.preset-guide__list {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: var(--melodify-muted);
+  font-size: 0.8125rem;
+  line-height: 1.55;
+}
+
+.preset-guide__list li + li {
+  margin-top: 0.5rem;
+}
+
+.preset-guide__custom-flow {
+  margin: 0.75rem 0 0;
+  padding: 0.75rem 0.8rem;
+  border-radius: var(--melodify-radius-sm);
+  border: 1px solid var(--melodify-divider);
+  background: linear-gradient(
+    150deg,
+    rgba(var(--melodify-primary-rgb), 0.07) 0%,
+    var(--melodify-surface-muted) 58%
+  );
+}
+
+.preset-guide__custom-flow-title {
+  display: block;
+  margin-bottom: 0.55rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--melodify-strong);
+}
+
+.preset-guide__custom-flow-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.78rem;
+  line-height: 1.52;
+  color: var(--melodify-muted);
+}
+
+.preset-guide__custom-flow-list li + li {
+  margin-top: 0.45rem;
+}
+
+.preset-guide__extra {
+  margin: 0.85rem 0 0;
+  padding: 0.65rem 0.75rem;
+  border-radius: var(--melodify-radius-sm);
+  background: var(--melodify-surface-muted);
+  border: 1px solid var(--melodify-divider);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--melodify-strong);
+}
+
+.preset-guide__refund {
+  margin: 0.75rem 0 0;
+  font-size: 0.78rem;
+  color: var(--melodify-muted);
+  line-height: 1.45;
+}
+
+.preset-guide__jump {
   margin-top: 0.55rem;
+  padding: 0;
+  font-weight: 600;
 }
 
 @media (max-width: 980px) {
   .generate-grid {
     grid-template-columns: 1fr;
+  }
+
+  .side-panel {
+    position: static;
+    top: auto;
+    max-width: none;
   }
 }
 

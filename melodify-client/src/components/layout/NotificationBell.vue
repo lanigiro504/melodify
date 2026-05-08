@@ -44,7 +44,7 @@ const onShow = () => {
     <div class="notify-pop">
       <div class="notify-head">
         <span class="notify-title">站内通知</span>
-        <small v-if="!items.length">生成任务完成时将在此提示（WebSocket）</small>
+        <small v-if="!items.length">生成任务完成时将在此提示</small>
       </div>
       <template v-if="items.length">
         <div v-for="it in items" :key="it.id" class="notify-row">
