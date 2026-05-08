@@ -7,6 +7,11 @@ spring:
   config:
     import: optional:classpath:application-local.yml
 
+  servlet:
+    multipart:
+      max-file-size: 2MB
+      max-request-size: 2MB
+
   # 数据库连接配置
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -67,3 +72,8 @@ melodify:
     enabled: false
     local-dir: data/melodify-audio
     public-uri-prefix: /api/media/audio
+
+  avatar-storage:
+    local-dir: data/melodify-avatars
+    public-uri-prefix: /api/media/avatar
+    max-bytes: 2097152

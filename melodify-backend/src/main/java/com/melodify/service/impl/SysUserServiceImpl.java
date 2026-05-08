@@ -10,12 +10,14 @@ import com.melodify.model.dto.UserLoginDTO;
 import com.melodify.model.dto.UserProfileDTO;
 import com.melodify.model.dto.UserRegisterDTO;
 import com.melodify.security.LegacyPasswordCodec;
+import com.melodify.service.AvatarStorageService;
 import com.melodify.service.SysUserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
  * 《系统用户》业务实现（注册登录、本人资料）。
@@ -26,6 +28,7 @@ import org.springframework.util.StringUtils;
 public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> implements SysUserService {
 
 	private final MelodifyUserProperties melodifyUserProperties;
+	private final AvatarStorageService avatarStorageService;
 
 	private static final long DEFAULT_ROLE_ID = 2L;
 	private static final int DEFAULT_STATUS_NORMAL = 1;
@@ -123,6 +126,26 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
 		if (!ok) {
 			throw new BizException(500, "资料更新失败，请稍后重试");
 		}
+	}
+
+	@Override
+	@Transactional(rollbackFor = Exception.class)
+	public String uploadSelfAvatar(Long userId, MultipartFile file) {
+		SysUser u = getById(userId);
+		if (u == null) {
+			throw new BizException(404, "用户不存在");
+		}
+		String oldAvatar = u.getAvatar();
+		String path = avatarStorageService.storeAvatarForUser(userId, file);
+		boolean ok = lambdaUpdate()
+				.eq(SysUser::getId, userId)
+				.set(SysUser::getAvatar, path)
+				.update();
+		if (!ok) {
+			throw new BizException(500, "头像更新失败");
+		}
+		avatarStorageService.deleteManagedAvatarFileIfPresent(oldAvatar);
+		return path;
 	}
 
 	@Override

@@ -12,6 +12,7 @@ import { likeMusicAsset, unlikeMusicAsset } from '@/api/musicAssets'
 import { useAuthStore } from '@/stores/auth'
 import { usePlayerStore } from '@/stores/player'
 import { unwrapResult } from '@/utils/apiResult'
+import { downloadAudioByFileUrl } from '@/utils/downloadAudio'
 import { exploreItemPlaySubtitle } from '@/utils/exploreDisplay'
 import { extractTrackLyrics } from '@/utils/trackLyrics'
 import { showSubmitError } from '@/utils/showSubmitError'
@@ -31,6 +32,7 @@ const filters = reactive({ keyword: '', sort: 'NEWEST' as ExploreSortMode })
 const EXPLORE_PAGE_SIZE_MAX = 48
 
 const likeBusyId = ref<number | null>(null)
+const downloadBusyId = ref<number | null>(null)
 
 let keywordDebounce: ReturnType<typeof setTimeout> | null = null
 
@@ -138,6 +140,22 @@ const clearKeywordAndSearch = () => {
   applySearch()
 }
 
+const onDownload = async (item: ExploreAssetItem) => {
+  if (!item.fileUrl?.trim()) {
+    ElMessage.warning('暂无可下载地址')
+    return
+  }
+  const name = item.title?.trim() || item.prompt?.trim() || '未命名作品'
+  downloadBusyId.value = item.id
+  try {
+    await downloadAudioByFileUrl(item.fileUrl, name)
+  } catch (e) {
+    showSubmitError(e, '下载失败，请稍后重试')
+  } finally {
+    downloadBusyId.value = null
+  }
+}
+
 onMounted(() => void fetchList())
 </script>
 
@@ -201,6 +219,9 @@ onMounted(() => void fetchList())
           </div>
           <div class="explore-card__actions">
             <el-button type="primary" size="small" @click="onPlay(item)">播放</el-button>
+            <el-button size="small" :loading="downloadBusyId === item.id" @click="onDownload(item)">
+              下载
+            </el-button>
             <template v-if="isAuthenticated">
               <el-button
                 size="small"
@@ -240,7 +261,7 @@ onMounted(() => void fetchList())
 .explore-intro {
   padding-bottom: 1.25rem;
   margin-bottom: 0.5rem;
-  border-bottom: 1px solid var(--melodify-border, #e5e7eb);
+  border-bottom: 1px solid var(--melodify-divider-strong, var(--melodify-border));
 }
 
 .explore-intro__head {
@@ -259,26 +280,39 @@ onMounted(() => void fetchList())
   gap: 0.875rem;
   padding: 1rem;
   border-radius: var(--melodify-radius-lg, 12px);
-  border: 1px solid var(--melodify-border, #e5e7eb);
-  background: #fff;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-  transition: border-color 0.15s ease;
+  border: 1px solid var(--melodify-divider-strong, rgba(58, 48, 40, 0.12));
+  background: transparent;
+  box-shadow: none;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease,
+    background-color 0.18s ease;
 }
 
 .explore-card:hover {
-  border-color: #d1d5db;
+  background: var(--melodify-surface-muted, #f5f5f5);
+  border-color: rgba(var(--melodify-primary-rgb), 0.22);
+  box-shadow: var(--melodify-shadow-hover);
+  transform: translateY(-2px);
 }
 
 .explore-card__cover {
   width: 4rem;
   height: 4rem;
-  border-radius: 8px;
+  border-radius: var(--melodify-radius-sm, 8px);
   display: grid;
   place-items: center;
-  background: #f3f4f6;
-  color: #374151;
-  font-weight: 600;
+  background: #fafafa;
+  color: var(--el-color-primary);
+  font-weight: 700;
   font-size: 0.95rem;
+  border: 1px solid var(--melodify-divider, rgba(0, 0, 0, 0.06));
+  transition: background-color 0.18s ease;
+}
+
+.explore-card:hover .explore-card__cover {
+  background: var(--el-color-primary-light-9);
 }
 
 .explore-card__abbr {
@@ -324,7 +358,7 @@ onMounted(() => void fetchList())
   width: 0.35rem;
   height: 0.35rem;
   border-radius: 999px;
-  background: #d1d5db;
+  background: color-mix(in srgb, var(--melodify-muted) 35%, #ccc4b8);
 }
 
 .like-dot--on {
@@ -358,14 +392,25 @@ onMounted(() => void fetchList())
 }
 
 .explore-empty-cta {
-  display: inline-block;
-  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.48rem 0.95rem;
+  margin-top: 0.35rem;
+  border-radius: var(--melodify-radius-sm);
+  font-weight: 700;
+  font-size: 0.875rem;
   color: var(--el-color-primary);
   text-decoration: none;
 }
 
 .explore-empty-cta:hover {
   text-decoration: underline;
+}
+
+.explore-empty-cta:focus-visible {
+  outline: 2px solid var(--el-color-primary);
+  outline-offset: 3px;
 }
 
 .pager-wrap {

@@ -5,6 +5,7 @@ import com.melodify.entity.SysUser;
 import com.melodify.model.dto.UserProfileDTO;
 import com.melodify.model.dto.UserLoginDTO;
 import com.melodify.model.dto.UserRegisterDTO;
+import org.springframework.web.multipart.MultipartFile;
 
 public interface SysUserService extends IService<SysUser> {
 
@@ -29,6 +30,11 @@ public interface SysUserService extends IService<SysUser> {
 	 * 更新本人可写字段（昵称、头像、邮箱、手机）；不传或 null 的字段不修改。
 	 */
 	void updateSelfProfile(Long userId, UserProfileDTO dto);
+
+	/**
+	 * 本地上传头像并写入 {@code avatar}；返回对外访问路径。
+	 */
+	String uploadSelfAvatar(Long userId, MultipartFile file);
 
 	/**
 	 * 管理端新建用户：校验用户名唯一，明文密码 MD5 入库（与登录校验一致）。

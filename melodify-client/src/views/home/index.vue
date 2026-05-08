@@ -106,7 +106,7 @@ const goLogin = () => router.push('/login')
 
 <style scoped>
 .home {
-  padding-top: 0.25rem;
+  padding-top: 0.35rem;
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -114,89 +114,49 @@ const goLogin = () => router.push('/login')
 }
 
 .hero {
-  position: relative;
-  overflow: hidden;
   display: grid;
   grid-template-columns: minmax(0, 1.12fr) minmax(18rem, 0.88fr);
   align-items: center;
   gap: clamp(1.25rem, 4vw, 3rem);
-  min-height: 25rem;
-  padding: clamp(2rem, 5vw, 4rem);
-  border-color: rgba(109, 93, 252, 0.14);
-  background:
-    radial-gradient(circle at 14% 16%, rgba(109, 93, 252, 0.16), transparent 34%),
-    radial-gradient(circle at 85% 20%, rgba(45, 212, 191, 0.15), transparent 30%),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.92));
-  box-shadow:
-    0 24px 70px rgba(15, 23, 42, 0.08),
-    0 1px 0 rgba(255, 255, 255, 0.9) inset;
+  min-height: 24rem;
+  padding: clamp(1.75rem, 4vw, 3rem);
 }
 
-.hero::before {
-  content: '';
-  position: absolute;
-  inset: 1px;
-  pointer-events: none;
-  border-radius: inherit;
-  background:
-    linear-gradient(120deg, rgba(255, 255, 255, 0.7), transparent 38%),
-    linear-gradient(90deg, rgba(109, 93, 252, 0.08), transparent 55%);
-}
-
-.hero::after {
-  content: '';
-  position: absolute;
-  right: -7rem;
-  bottom: -8rem;
-  width: 20rem;
-  height: 20rem;
-  border-radius: 999px;
-  background: rgba(109, 93, 252, 0.08);
-  filter: blur(10px);
-}
-
-.hero__copy,
-.hero__visual {
-  position: relative;
-  z-index: 1;
+.hero__copy {
+  min-width: 0;
 }
 
 .hero__eyebrow {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
-  padding: 0.35rem 0.8rem;
-  border: 1px solid rgba(99, 102, 241, 0.16);
+  padding: 0.32rem 0.75rem;
+  border: 1px solid var(--melodify-divider-strong);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.72);
-  box-shadow: 0 10px 26px rgba(99, 102, 241, 0.08);
-  backdrop-filter: blur(10px);
+  background: var(--melodify-surface-muted);
+  color: var(--melodify-muted);
 }
 
 .hero__title {
   max-width: 10.8em;
-  line-height: 0.96;
-  margin: 1rem 0 1rem;
+  line-height: 1.02;
+  margin: 1rem 0;
   text-wrap: balance;
 }
 
 .hero__title span {
   display: block;
-  background: linear-gradient(100deg, #111827 0%, #4338ca 48%, #0891b2 100%);
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--el-color-primary);
 }
 
 .hero__lead {
-  font-size: 1.08rem;
+  font-size: 1.05rem;
   max-width: 41rem;
-  margin: 0 0 1.35rem;
-  line-height: 1.75;
+  margin: 0 0 1.25rem;
 }
 
 .hero__lead strong {
   color: var(--el-color-primary);
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .hero__actions {
@@ -210,22 +170,10 @@ const goLogin = () => router.push('/login')
   min-width: 6.75rem;
 }
 
-.hero__actions :deep(.el-button--primary) {
-  background: linear-gradient(135deg, #4f46e5, #7c3aed);
-  border-color: transparent;
-  box-shadow: 0 16px 34px rgba(79, 70, 229, 0.24);
-}
-
-.hero__actions :deep(.el-button.is-plain) {
-  border-color: rgba(99, 102, 241, 0.14);
-  background: rgba(255, 255, 255, 0.66);
-  backdrop-filter: blur(10px);
-}
-
 .hero__greeting {
   width: 100%;
-  margin: 0 0 0.25rem;
-  font-size: 1rem;
+  margin: 0 0 0.35rem;
+  font-size: 0.98rem;
   color: var(--melodify-muted);
 }
 
@@ -238,32 +186,29 @@ const goLogin = () => router.push('/login')
 .hero__metrics {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 1.15rem;
+  gap: 0.45rem;
+  margin-top: 1rem;
 }
 
 .hero__metrics span {
-  padding: 0.42rem 0.7rem;
-  border: 1px solid rgba(99, 102, 241, 0.12);
+  padding: 0.38rem 0.68rem;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.64);
-  color: #475569;
-  font-size: 0.8rem;
-  font-weight: 800;
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
+  border: 1px solid var(--melodify-divider);
+  background: var(--melodify-surface-muted);
+  color: var(--melodify-muted);
+  font-size: 0.78rem;
+  font-weight: 500;
 }
 
 .hero__fineprint {
-  margin: 1.15rem 0 0;
-  font-size: 0.82rem;
+  margin: 1rem 0 0;
+  font-size: 0.8125rem;
   color: var(--melodify-muted);
-  line-height: 1.5;
 }
 
 .hero__fineprint a {
   color: var(--el-color-primary);
-  font-weight: 700;
-  text-decoration: none;
+  font-weight: 600;
 }
 
 .hero__fineprint a:hover {
@@ -276,17 +221,12 @@ const goLogin = () => router.push('/login')
 }
 
 .studio-card {
-  width: min(100%, 25rem);
+  width: min(100%, 24rem);
   padding: 1rem;
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  border-radius: 1.75rem;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(255, 255, 255, 0.58)),
-    linear-gradient(135deg, rgba(109, 93, 252, 0.1), rgba(45, 212, 191, 0.08));
-  box-shadow:
-    0 22px 54px rgba(15, 23, 42, 0.12),
-    0 1px 0 rgba(255, 255, 255, 0.9) inset;
-  backdrop-filter: blur(18px);
+  border: 1px solid var(--melodify-divider-strong);
+  border-radius: var(--melodify-radius-lg);
+  background: var(--melodify-card-solid);
+  box-shadow: var(--melodify-shadow-card);
 }
 
 .studio-card__top,
@@ -298,58 +238,59 @@ const goLogin = () => router.push('/login')
 }
 
 .studio-card__badge {
-  color: #4338ca;
-  font-size: 0.72rem;
-  font-weight: 900;
+  color: var(--el-color-primary);
+  font-size: 0.7rem;
+  font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
 .studio-card__pulse {
-  width: 0.65rem;
-  height: 0.65rem;
+  width: 0.55rem;
+  height: 0.55rem;
   border-radius: 999px;
-  background: #22c55e;
-  box-shadow: 0 0 0 0.4rem rgba(34, 197, 94, 0.14);
+  background: var(--el-color-success);
 }
 
 .studio-wave {
-  height: 13rem;
+  height: 11rem;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.42rem;
-  margin: 0.75rem 0;
-  border-radius: 1.25rem;
-  background:
-    radial-gradient(circle at 50% 45%, rgba(109, 93, 252, 0.13), transparent 58%),
-    rgba(248, 250, 252, 0.74);
+  margin: 0.65rem 0;
+  border-radius: var(--melodify-radius-lg);
+  background: var(--melodify-surface-muted);
 }
 
 .studio-wave span {
-  width: 0.44rem;
+  width: 0.4rem;
   height: 3rem;
   border-radius: 999px;
-  background: linear-gradient(180deg, #7c3aed, #22d3ee);
-  opacity: 0.78;
+  background: linear-gradient(
+    180deg,
+    var(--el-color-primary),
+    var(--el-color-primary-light-7)
+  );
+  opacity: 0.75;
 }
 
 .studio-wave span:nth-child(2n) {
-  height: 6.5rem;
+  height: 6rem;
 }
 
 .studio-wave span:nth-child(3n) {
-  height: 9rem;
+  height: 8.5rem;
 }
 
 .studio-wave span:nth-child(5n) {
-  height: 11rem;
+  height: 10rem;
 }
 
 .studio-card__track {
-  padding: 0.75rem 0.8rem;
-  border-radius: 1rem;
-  background: rgba(255, 255, 255, 0.78);
+  padding: 0.65rem 0.75rem;
+  border-radius: var(--melodify-radius-md);
+  background: var(--melodify-surface-muted);
 }
 
 .studio-card__track strong,
@@ -359,24 +300,24 @@ const goLogin = () => router.push('/login')
 
 .studio-card__track strong {
   color: var(--melodify-strong);
-  font-weight: 900;
+  font-weight: 600;
 }
 
 .studio-card__track span {
   color: var(--melodify-muted);
-  font-size: 0.78rem;
+  font-size: 0.76rem;
 }
 
 .studio-card__duration {
-  color: #4338ca !important;
-  font-weight: 900;
+  color: var(--el-color-primary);
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
 .foot-strip {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.9rem;
+  gap: 0.85rem;
 }
 
 @media (max-width: 720px) {
@@ -390,46 +331,55 @@ const goLogin = () => router.push('/login')
   display: flex;
   flex-direction: column;
   gap: 0.28rem;
-  min-height: 7rem;
-  padding: 1.1rem 1.15rem;
-  border-radius: 1.25rem;
+  min-height: 6.75rem;
+  padding: 1rem 1.1rem;
+  border-radius: var(--melodify-radius-lg);
   text-decoration: none;
   color: inherit;
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--melodify-divider-strong);
+  background: var(--melodify-card-solid);
   transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease,
-    border-color 0.2s ease;
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    border-color 0.18s ease;
 }
 
 .foot-strip__link:hover {
   transform: translateY(-2px);
-  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.08);
-  border-color: rgba(99, 102, 241, 0.2);
+  border-color: rgba(var(--melodify-primary-rgb), 0.22);
+  box-shadow: var(--melodify-shadow-hover);
+}
+
+.foot-strip__link:focus-visible {
+  outline: 2px solid var(--el-color-primary-light-5);
+  outline-offset: 3px;
+}
+
+.foot-strip__link:focus:not(:focus-visible) {
+  outline: none;
 }
 
 .foot-strip__icon {
   display: inline-flex;
   width: fit-content;
-  padding: 0.22rem 0.5rem;
-  border-radius: 0.5rem;
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  background: rgba(248, 250, 252, 0.95);
-  color: #64748b;
+  padding: 0.2rem 0.48rem;
+  border-radius: var(--melodify-radius-sm);
+  border: 1px solid var(--melodify-divider-strong);
+  background: var(--melodify-surface-muted);
+  color: var(--melodify-muted);
   font-size: 0.72rem;
-  font-weight: 900;
+  font-weight: 600;
 }
 
 .foot-strip__k {
   margin-top: auto;
-  font-weight: 900;
-  font-size: 1.02rem;
+  font-weight: 600;
+  font-size: 1rem;
   color: var(--melodify-strong);
 }
 
 .foot-strip__v {
-  font-size: 0.82rem;
+  font-size: 0.8125rem;
   color: var(--melodify-muted);
   line-height: 1.45;
 }
@@ -437,6 +387,7 @@ const goLogin = () => router.push('/login')
 @media (max-width: 900px) {
   .hero {
     grid-template-columns: 1fr;
+    min-height: unset;
   }
 
   .hero__visual {

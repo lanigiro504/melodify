@@ -33,9 +33,9 @@ const onShow = () => {
     @show="onShow"
   >
     <template #reference>
-      <span class="notify-trigger" aria-label="站内通知">
+      <span class="notify-trigger">
         <el-badge :value="unreadCount" :hidden="unreadCount === 0" :max="99">
-          <el-button circle plain type="primary" aria-label="打开通知列表">
+          <el-button class="notify-btn" circle aria-label="打开站内通知列表">
             <el-icon><BellFilled /></el-icon>
           </el-button>
         </el-badge>
@@ -76,21 +76,35 @@ const onShow = () => {
   vertical-align: middle;
 }
 
+.notify-btn {
+  --el-button-bg-color: rgba(var(--melodify-primary-rgb), 0.08);
+  --el-button-border-color: rgba(var(--melodify-primary-rgb), 0.16);
+  --el-button-hover-bg-color: rgba(var(--melodify-primary-rgb), 0.12);
+  --el-button-hover-border-color: rgba(var(--melodify-primary-rgb), 0.24);
+  --el-button-hover-text-color: var(--el-color-primary);
+  --el-button-text-color: var(--el-color-primary);
+}
+
+.notify-btn:focus-visible {
+  outline: 2px solid var(--el-color-primary-light-5);
+  outline-offset: 2px;
+}
+
 .notify-head {
   margin-bottom: 0.65rem;
   padding-bottom: 0.5rem;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+  border-bottom: 1px solid rgba(100, 90, 82, 0.12);
 }
 
 .notify-title {
-  font-weight: 800;
+  font-weight: 600;
   color: var(--melodify-strong);
   display: block;
 }
 
 .notify-row {
   padding: 0.5rem 0;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+  border-bottom: 1px solid rgba(100, 90, 82, 0.08);
 }
 
 .notify-row:last-child {
@@ -98,7 +112,7 @@ const onShow = () => {
 }
 
 .notify-row-title {
-  font-weight: 800;
+  font-weight: 600;
   font-size: 0.85rem;
   color: var(--melodify-strong);
 }
@@ -120,7 +134,7 @@ const onShow = () => {
 }
 
 .notify-link {
-  font-weight: 800;
+  font-weight: 600;
   color: var(--el-color-primary);
   text-decoration: none;
 }

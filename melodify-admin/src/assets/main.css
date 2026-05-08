@@ -28,6 +28,13 @@ html {
   --admin-border: rgba(0, 0, 0, 0.08);
   --admin-border-strong: rgba(0, 0, 0, 0.1);
   --admin-text-muted: #737373;
+  /* 数据表：与品牌色弱关联的表头与分隔 */
+  --admin-table-header-bg: #f4f2fb;
+  --admin-table-header-text: #49416b;
+  --admin-table-row-hover: rgba(var(--admin-primary-rgb), 0.08);
+  --admin-table-stripe: rgba(88, 77, 158, 0.035);
+  --admin-table-edge: rgba(58, 48, 88, 0.09);
+  --admin-toolbar-border: rgba(0, 0, 0, 0.065);
 }
 
 html,
@@ -56,10 +63,12 @@ body {
 /* 表格页统一的白色工作台面板：边框优先、轻投影 */
 .admin-page-board {
   background: var(--admin-surface);
-  padding: clamp(1.125rem, 2.2vw, 1.4rem);
-  border-radius: 14px;
+  padding: clamp(1.125rem, 2.2vw, 1.5rem);
+  border-radius: 16px;
   border: 1px solid var(--admin-border-strong);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.04),
+    0 14px 36px rgba(58, 48, 88, 0.045);
 }
 
 .admin-toolbar {
@@ -67,23 +76,66 @@ body {
   flex-wrap: wrap;
   align-items: center;
   gap: 0.625rem;
-  margin-bottom: 1.05rem;
+  margin-bottom: 0;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--admin-toolbar-border);
 }
 
 .admin-toolbar--simple {
   display: block;
-  margin-bottom: 1rem;
+  margin-bottom: 0;
 }
 
 .admin-pager {
-  margin-top: 1rem;
+  margin-top: 1.125rem;
+  padding-top: 0.25rem;
   justify-content: flex-end;
 }
 
-.el-table {
-  --el-table-header-bg-color: var(--admin-surface-muted);
-  --el-fill-color-lighter: rgba(244, 244, 245, 0.9);
-  border-radius: var(--el-border-radius-base);
+/* 工作台内数据表：表头强调、弱斑马纹、悬停与留白 */
+.admin-page-board .el-table {
+  --el-table-header-bg-color: var(--admin-table-header-bg);
+  --el-table-header-text-color: var(--admin-table-header-text);
+  --el-table-row-hover-bg-color: var(--admin-table-row-hover);
+  --el-table-border-color: var(--admin-table-edge);
+  --el-fill-color-lighter: var(--admin-table-stripe);
+  --el-table-text-color: #27272a;
+  margin-top: 1rem;
+  font-size: 14px;
+  border-radius: 12px;
+  box-shadow: inset 0 0 0 1px var(--admin-table-edge);
+}
+
+.admin-page-board .el-table th.el-table__cell {
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+}
+
+.admin-page-board .el-table td.el-table__cell {
+  padding-top: 13px;
+  padding-bottom: 13px;
+}
+
+.admin-page-board .el-table.el-table--small td.el-table__cell {
+  padding-top: 11px;
+  padding-bottom: 11px;
+}
+
+.admin-page-board .el-table .cell {
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.admin-page-board .el-table .el-table__empty-block {
+  min-height: 200px;
+}
+
+.admin-page-board .el-table code {
+  font-size: 12px;
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  background: var(--admin-surface-muted);
 }
 
 .admin-login-card {

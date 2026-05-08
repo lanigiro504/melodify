@@ -49,6 +49,8 @@ public class SecurityConfig {
 						.permitAll()
 						.requestMatchers(HttpMethod.GET, "/api/media/audio/**")
 						.permitAll()
+						.requestMatchers(HttpMethod.GET, "/api/media/avatar/**")
+						.permitAll()
 						.requestMatchers("/api/admin/**").hasRole("ADMIN")
 						.requestMatchers("/api/client/**").authenticated()
 						.anyRequest().authenticated())

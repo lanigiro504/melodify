@@ -100,9 +100,9 @@ onMounted(() => void fetchProducts())
 .balance-card {
   min-width: 9rem;
   padding: 1rem 1.25rem;
-  border-radius: 1.25rem;
-  background: #f8fafc;
-  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: var(--melodify-radius-xl, 1.25rem);
+  background: #faf8f5;
+  border: 1px solid rgba(100, 92, 85, 0.14);
 }
 
 .balance-card span,
@@ -116,11 +116,32 @@ onMounted(() => void fetchProducts())
   margin-top: 0.2rem;
   color: var(--melodify-strong);
   font-size: 2rem;
-  font-weight: 900;
+  font-weight: 700;
+  letter-spacing: -0.03em;
 }
 
 .product-card {
   padding: 1.4rem;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    border-color 0.18s ease;
+}
+
+.product-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--melodify-shadow-hover);
+}
+
+.product-card:focus-within {
+  border-color: rgba(var(--melodify-primary-rgb), 0.26);
+}
+
+.product-card .el-button {
+  margin-top: auto;
 }
 
 .product-card h2 {
@@ -133,7 +154,8 @@ onMounted(() => void fetchProducts())
   display: block;
   margin-bottom: 1rem;
   color: var(--el-color-primary);
-  font-weight: 900;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 .order-card {

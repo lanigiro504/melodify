@@ -5,6 +5,7 @@ import type { RechargeOrder } from '@/types/api'
 import * as adminRechargeOrdersApi from '@/api/adminRechargeOrders'
 import { RECHARGE_ORDER_STATUS, rechargeOrderStatusLabel } from '@/constants/recharge'
 import { ADMIN_MAX_PAGE_SIZE, useAdminPaging } from '@/composables/useAdminPaging'
+import { formatDateTimeZh } from '@/utils/formatDateTime'
 
 defineOptions({ name: 'AdminRechargeOrdersPage' })
 
@@ -61,8 +62,16 @@ onMounted(() => loadList())
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="paidAt" label="支付时间" min-width="158" />
-      <el-table-column prop="createTime" label="创建时间" min-width="158" />
+      <el-table-column label="支付时间" min-width="172">
+        <template #default="{ row }">
+          {{ formatDateTimeZh(row.paidAt) }}
+        </template>
+      </el-table-column>
+      <el-table-column label="创建时间" min-width="172">
+        <template #default="{ row }">
+          {{ formatDateTimeZh(row.createTime) }}
+        </template>
+      </el-table-column>
     </el-table>
     <el-pagination
       class="admin-pager"

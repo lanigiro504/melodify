@@ -4,10 +4,11 @@ import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { getMusicAssetDetail, likeMusicAsset, patchMusicAssetPublic, unlikeMusicAsset } from '@/api/musicAssets'
 import { usePlayerStore } from '@/stores/player'
-import { resolvePlayableUrl } from '@/utils/audioUrl'
+import { formatDateTimeZh } from '@/utils/formatDateTime'
 import { extractTrackLyrics } from '@/utils/trackLyrics'
 import type { MusicAssetDetail } from '@/types/musicAsset'
 import { unwrapResult } from '@/utils/apiResult'
+import { downloadAudioByFileUrl } from '@/utils/downloadAudio'
 import { showSubmitError } from '@/utils/showSubmitError'
 
 defineOptions({ name: 'WorkDetailPage' })
@@ -18,6 +19,7 @@ const player = usePlayerStore()
 const loading = ref(false)
 const liking = ref(false)
 const publishing = ref(false)
+const downloading = ref(false)
 const detail = ref<MusicAssetDetail | null>(null)
 
 const asset = computed(() => detail.value?.asset)
@@ -87,6 +89,8 @@ const paramEntries = computed(() => {
     }))
 })
 
+const createTimeDisplay = computed(() => formatDateTimeZh(asset.value?.createTime))
+
 async function fetchDetail() {
   const id = Number(route.params.id)
   if (!Number.isFinite(id)) {
@@ -154,7 +158,7 @@ async function onPublicChange(val: string | number | boolean) {
   }
 }
 
-function playInGlobalBar() {
+function playPreview() {
   if (!asset.value?.fileUrl) return
   player.playTrack({
     title: title.value,
@@ -163,6 +167,21 @@ function playInGlobalBar() {
     lyrics: extractTrackLyrics(task.value?.prompt, task.value?.params ?? null),
     durationSec: asset.value.durationSec ?? undefined,
   })
+}
+
+async function downloadTrack() {
+  if (!asset.value?.fileUrl) {
+    ElMessage.warning('暂无可下载地址')
+    return
+  }
+  downloading.value = true
+  try {
+    await downloadAudioByFileUrl(asset.value.fileUrl, title.value, asset.value.format || 'mp3')
+  } catch (e) {
+    showSubmitError(e, '下载失败，请稍后重试')
+  } finally {
+    downloading.value = false
+  }
 }
 
 onMounted(() => void fetchDetail())
@@ -197,13 +216,22 @@ onMounted(() => void fetchDetail())
     </section>
 
     <section v-if="asset" class="work-player-card melodify-glass-card">
-      <div class="cover-art">
-        <span>{{ (asset.title || 'AI').slice(0, 2) }}</span>
-      </div>
+        <div
+          class="cover-art"
+          role="button"
+          tabindex="0"
+          :aria-label="'试听见底部播放条：' + (asset.title || '作品')"
+          @click="playPreview"
+          @keydown.enter.prevent="playPreview"
+          @keydown.space.prevent="playPreview"
+        >
+          <span>{{ (asset.title || 'AI').slice(0, 2) }}</span>
+        </div>
       <div class="player-main">
         <h2>{{ asset.title || 'AI 生成音乐' }}</h2>
         <p>时长 {{ asset.durationSec || 0 }} 秒 · {{ asset.format || 'mp3' }}</p>
         <div class="player-row">
+          <el-button type="primary" round :loading="downloading" @click="downloadTrack">下载音频</el-button>
           <el-switch
             :model-value="(asset.isPublic ?? 0) === 1"
             :loading="publishing"
@@ -211,10 +239,11 @@ onMounted(() => void fetchDetail())
             inactive-text="仅自己"
             @change="onPublicChange"
           />
-          <el-button type="primary" round plain @click="playInGlobalBar">用底部播放器播放</el-button>
         </div>
-        <p class="player-hint">使用站内播放器可查看歌词同步（若本作品有识别到的歌词）。</p>
-        <audio controls preload="none" :src="resolvePlayableUrl(asset.fileUrl)" />
+        <p class="player-hint">
+          点击封面试听；进度由底部播放条控制，若有歌词将同步高亮。成片以 URL 存库（可能为 Suno 外链或已镜像到本服务
+          <code>/api/media/audio/</code>）。若下载因跨域失败，浏览器会新开标签页，可在该页另存为。
+        </p>
       </div>
     </section>
 
@@ -229,7 +258,7 @@ onMounted(() => void fetchDetail())
       </div>
       <div class="soft-card info-card">
         <span>创建时间</span>
-        <strong>{{ asset?.createTime || '—' }}</strong>
+        <strong class="info-card__value">{{ createTimeDisplay }}</strong>
       </div>
     </section>
 
@@ -299,7 +328,7 @@ onMounted(() => void fetchDetail())
 }
 
 .player-hint {
-  margin: 0 0 0.5rem;
+  margin: 0;
   font-size: 0.82rem;
   color: var(--melodify-muted);
 }
@@ -310,11 +339,31 @@ onMounted(() => void fetchDetail())
   display: grid;
   place-items: center;
   border-radius: 1.5rem;
-  background: linear-gradient(145deg, #f5f3ff, #eef2ff);
-  color: #6d5dfc;
+  background: #fafafa;
+  color: var(--el-color-primary);
   font-size: 2rem;
-  font-weight: 900;
-  border: 1px solid rgba(99, 102, 241, 0.12);
+  font-weight: 700;
+  border: 1px solid var(--melodify-divider-strong, rgba(58, 48, 40, 0.12));
+  cursor: pointer;
+  user-select: none;
+  transition:
+    background-color 0.18s ease,
+    border-color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.cover-art:hover {
+  background: var(--el-color-primary-light-9);
+  border-color: rgba(var(--melodify-primary-rgb), 0.22);
+}
+
+.cover-art:focus-visible {
+  outline: 2px solid var(--el-color-primary);
+  outline-offset: 3px;
+}
+
+.cover-art:active {
+  transform: scale(0.99);
 }
 
 .player-main h2 {
@@ -324,11 +373,6 @@ onMounted(() => void fetchDetail())
 
 .player-main p {
   color: var(--melodify-muted);
-}
-
-.player-main audio {
-  width: 100%;
-  max-width: 40rem;
 }
 
 .player-row {
@@ -353,6 +397,15 @@ onMounted(() => void fetchDetail())
   color: var(--melodify-strong);
 }
 
+.info-card__value {
+  font-size: 0.9375rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+  word-break: keep-all;
+}
+
 .params-card {
   padding: 1.25rem;
 }
@@ -371,14 +424,14 @@ onMounted(() => void fetchDetail())
 .param-list span {
   padding: 0.45rem 0.7rem;
   border-radius: 999px;
-  background: #f8fafc;
+  background: var(--melodify-surface-sunken, #f3efe6);
   color: var(--melodify-muted);
   font-size: 0.9rem;
 }
 
 .param-list span strong {
-  color: var(--melodify-strong);
-  font-weight: 800;
+  color: var(--melodify-classical-ink, var(--melodify-strong));
+  font-weight: 700;
 }
 
 @media (max-width: 720px) {

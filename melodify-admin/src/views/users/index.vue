@@ -9,6 +9,7 @@ import * as adminRolesApi from '@/api/adminRoles'
 import * as adminUsersApi from '@/api/adminUsers'
 import type { SysRole, SysUser } from '@/types/api'
 import { unwrapResult } from '@/utils/apiResult'
+import { formatDateTimeZh } from '@/utils/formatDateTime'
 import { showSubmitError } from '@/utils/showSubmitError'
 
 defineOptions({ name: 'AdminUsersPage' })
@@ -207,7 +208,11 @@ onMounted(() => {
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="createTime" label="创建时间" min-width="160" />
+      <el-table-column label="创建时间" min-width="172">
+        <template #default="{ row }">
+          {{ formatDateTimeZh(row.createTime) }}
+        </template>
+      </el-table-column>
       <el-table-column label="操作" width="160" fixed="right">
         <template #default="{ row }">
           <el-button type="primary" link :icon="Edit" @click="openEdit(row)">编辑</el-button>

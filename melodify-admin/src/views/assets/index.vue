@@ -4,6 +4,7 @@ import { onMounted, reactive } from 'vue'
 import type { MusicAsset } from '@/types/api'
 import * as adminMusicAssetsApi from '@/api/adminMusicAssets'
 import { ADMIN_MAX_PAGE_SIZE, useAdminPaging } from '@/composables/useAdminPaging'
+import { formatDateTimeZh } from '@/utils/formatDateTime'
 import { shortenText } from '@/utils/text'
 
 defineOptions({ name: 'AdminAssetsPage' })
@@ -55,8 +56,8 @@ onMounted(() => loadList())
       <el-table-column label="标题" min-width="140">
         <template #default="{ row }">{{ shortenText(row.title ?? '', 40) }}</template>
       </el-table-column>
-      <el-table-column label="试听地址" min-width="200">
-        <template #default="{ row }">{{ shortenText(row.fileUrl ?? '', 48) }}</template>
+      <el-table-column label="试听地址" min-width="280" show-overflow-tooltip>
+        <template #default="{ row }">{{ row.fileUrl?.trim() || '—' }}</template>
       </el-table-column>
       <el-table-column label="公开" width="72">
         <template #default="{ row }">
@@ -65,7 +66,11 @@ onMounted(() => loadList())
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="createTime" label="创建时间" min-width="158" />
+      <el-table-column label="创建时间" min-width="172">
+        <template #default="{ row }">
+          {{ formatDateTimeZh(row.createTime) }}
+        </template>
+      </el-table-column>
     </el-table>
     <el-pagination
       class="admin-pager"

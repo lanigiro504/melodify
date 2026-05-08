@@ -1,6 +1,7 @@
 package com.melodify;
 
 import com.melodify.config.JwtProperties;
+import com.melodify.config.MelodifyAvatarStorageProperties;
 import com.melodify.config.MelodifyUserProperties;
 import com.melodify.config.MelodifyAudioStorageProperties;
 import com.melodify.config.MusicGenerationProperties;
@@ -20,7 +21,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 @SpringBootApplication(exclude = { UserDetailsServiceAutoConfiguration.class })
 @MapperScan("com.melodify.mapper")
 @EnableConfigurationProperties({ JwtProperties.class, MelodifyUserProperties.class, MusicGenerationProperties.class,
-		SunoApiProperties.class, MelodifyAudioStorageProperties.class })
+		SunoApiProperties.class, MelodifyAudioStorageProperties.class, MelodifyAvatarStorageProperties.class })
 public class MelodifyBackendApplication {
 
 	public static void main(String[] args) {

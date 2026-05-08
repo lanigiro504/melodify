@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { CaretLeft, CaretRight, Close, VideoPause, VideoPlay } from '@element-plus/icons-vue'
 import { storeToRefs } from 'pinia'
 import { computed, nextTick, ref, watch } from 'vue'
 import { usePlayerStore } from '@/stores/player'
@@ -10,7 +11,7 @@ const player = usePlayerStore()
 const { current, resolvedSrc, paused } = storeToRefs(player)
 
 const audioRef = ref<HTMLAudioElement | null>(null)
-const lyricsBoxRef = ref<HTMLElement | null>(null)
+const lyricsScrollRef = ref<HTMLElement | null>(null)
 const lyricsExpanded = ref(false)
 const currentTime = ref(0)
 const mediaDuration = ref(0)
@@ -37,15 +38,15 @@ const activeLineIndex = computed(() => {
   return Math.min(n - 1, Math.floor(ratio * n))
 })
 
-const timeLabel = computed(() => {
-  const fmt = (s: number) => {
-    if (!Number.isFinite(s) || s < 0) return '0:00'
-    const m = Math.floor(s / 60)
-    const sec = Math.floor(s % 60)
-    return `${m}:${sec.toString().padStart(2, '0')}`
-  }
-  return `${fmt(currentTime.value)} / ${fmt(mediaDuration.value)}`
-})
+const fmtTime = (s: number) => {
+  if (!Number.isFinite(s) || s < 0) return '0:00'
+  const m = Math.floor(s / 60)
+  const sec = Math.floor(s % 60)
+  return `${m}:${sec.toString().padStart(2, '0')}`
+}
+
+const elapsedLabel = computed(() => fmtTime(currentTime.value))
+const durationLabel = computed(() => fmtTime(mediaDuration.value))
 
 const progressPercent = computed(() => {
   if (!mediaDuration.value) return 0
@@ -104,9 +105,9 @@ watch(
 )
 
 watch(activeLineIndex, async (idx) => {
-  if (!lyricsExpanded.value || idx < 0 || !lyricsBoxRef.value) return
+  if (!lyricsExpanded.value || idx < 0 || !lyricsScrollRef.value) return
   await nextTick()
-  const row = lyricsBoxRef.value.querySelector(`[data-line="${idx}"]`)
+  const row = lyricsScrollRef.value.querySelector(`[data-line="${idx}"]`)
   row?.scrollIntoView({ block: 'center', behavior: 'smooth' })
 })
 
@@ -132,296 +133,490 @@ function seekRatio(ratio: number) {
   el.currentTime = r * mediaDuration.value
   currentTime.value = el.currentTime
 }
+
+function skipBy(deltaSec: number) {
+  const el = audioRef.value
+  if (!el) return
+  let dur = mediaDuration.value
+  if (!dur || dur <= 0) {
+    const d = el.duration
+    dur = Number.isFinite(d) && d > 0 ? d : 0
+  }
+  if (!dur) return
+  const next = Math.min(dur, Math.max(0, el.currentTime + deltaSec))
+  el.currentTime = next
+  currentTime.value = next
+}
+
 </script>
 
 <template>
-  <div
-    v-if="current"
-    class="melodify-player"
-    :class="{ 'melodify-player--lyrics-open': lyricLines.length > 0 && lyricsExpanded }"
-    role="region"
-    aria-label="全局播放器"
-  >
-    <audio
-      ref="audioRef"
-      preload="metadata"
-      @ended="player.setPaused(true)"
-      @timeupdate="onTimeUpdate"
-      @loadedmetadata="onLoadedMetadata"
-    />
-    <div
-      class="player-shell"
-      :class="{ 'player-shell--expanded': lyricLines.length > 0 && lyricsExpanded }"
-    >
-      <div class="player-top">
-        <div class="disc" :class="{ 'disc--playing': !paused }">
-          <span>{{ (current.title || 'M').slice(0, 1) }}</span>
-        </div>
-        <div class="track-meta">
-          <span class="t">{{ current.title || '未命名' }}</span>
-          <span v-if="current.subtitle" class="s">{{ current.subtitle }}</span>
-          <span class="time">{{ timeLabel }}</span>
-        </div>
-        <div class="player-actions">
-          <button
-            v-if="lyricLines.length"
-            type="button"
-            class="icon-btn ghost"
-            @click="lyricsExpanded = !lyricsExpanded"
-          >
-            {{ lyricsExpanded ? '收起歌词' : '歌词' }}
-          </button>
-          <button type="button" class="icon-btn" @click="player.setPaused(!paused)">
-            {{ paused ? '播放' : '暂停' }}
-          </button>
-          <button type="button" class="icon-btn ghost" @click="player.clear()">关闭</button>
-        </div>
-      </div>
+  <Teleport to="body">
+    <div v-if="current" class="player-root">
+      <audio
+        ref="audioRef"
+        preload="metadata"
+        @ended="player.setPaused(true)"
+        @timeupdate="onTimeUpdate"
+        @loadedmetadata="onLoadedMetadata"
+      />
 
-      <div v-if="mediaDuration > 0" class="seek-wrap">
-        <div class="seek-bg" aria-hidden="true">
-          <span :style="{ width: `${progressPercent}%` }" />
-        </div>
-        <input
-          class="seek"
-          type="range"
-          min="0"
-          max="1000"
-          step="1"
-          :value="Math.round((currentTime / mediaDuration) * 1000)"
-          @input="seekRatio(Number(($event.target as HTMLInputElement).value) / 1000)"
-        />
-      </div>
-
-      <div v-if="lyricLines.length && lyricsExpanded" class="lyrics-block">
-        <p class="lyrics-hint">歌词预览 · 无时间轴时按播放进度大致同步</p>
-        <div ref="lyricsBoxRef" class="lyrics-scroll">
+      <!-- 歌词层叠在底栏之上，独立于底栏裁剪 -->
+      <div
+        v-if="lyricLines.length && lyricsExpanded"
+        class="dock-lyrics melodify-glass-card"
+      >
+        <p class="dock-lyrics__hint">歌词预览 · 无时间轴时按进度粗略同步</p>
+        <div ref="lyricsScrollRef" class="dock-lyrics__scroll">
           <p
             v-for="(line, i) in lyricLines"
             :key="i"
             :data-line="i"
-            class="lyrics-line"
-            :class="{ 'lyrics-line--active': i === activeLineIndex }"
+            class="dock-lyrics__line"
+            :class="{ 'dock-lyrics__line--on': i === activeLineIndex }"
           >
             {{ line }}
           </p>
         </div>
       </div>
+
+      <section class="dock-bar" aria-label="全局播放器">
+        <!-- 顶部：时间与进度在同一窄带内，避免与封面行挤压 -->
+        <div v-if="mediaDuration > 0" class="dock-progress">
+          <span class="dock-time">{{ elapsedLabel }}</span>
+          <div class="dock-track-hit">
+            <div class="dock-track">
+              <div class="dock-track__fill" :style="{ transform: `scaleX(${progressPercent / 100})` }" />
+            </div>
+            <input
+              class="dock-range"
+              type="range"
+              min="0"
+              max="1000"
+              step="1"
+              aria-label="播放进度"
+              :value="Math.round((currentTime / mediaDuration) * 1000)"
+              @input="seekRatio(Number(($event.target as HTMLInputElement).value) / 1000)"
+            />
+          </div>
+          <span class="dock-time">{{ durationLabel }}</span>
+        </div>
+
+        <div class="dock-main">
+          <div class="dock-cover-wrap">
+            <div class="dock-cover" :class="{ 'dock-cover--live': !paused }">
+              <span>{{ (current.title || 'M').slice(0, 1) }}</span>
+            </div>
+          </div>
+
+          <div class="dock-info">
+            <p class="dock-title" :title="current.title">{{ current.title || '未命名' }}</p>
+            <p class="dock-sub">
+              {{ current.subtitle || 'Melodify' }}
+            </p>
+          </div>
+
+          <div class="dock-transport" aria-label="播放控制">
+            <button type="button" class="dock-icon-btn" aria-label="后退10秒" @click="skipBy(-10)">
+              <el-icon><CaretLeft /></el-icon>
+              <span class="dock-icon-btn__cap">10s</span>
+            </button>
+
+            <button type="button" class="dock-play" @click="player.setPaused(!paused)">
+              <el-icon v-if="paused" :size="28"><VideoPlay /></el-icon>
+              <el-icon v-else :size="28"><VideoPause /></el-icon>
+            </button>
+
+            <button type="button" class="dock-icon-btn" aria-label="前进10秒" @click="skipBy(10)">
+              <span class="dock-icon-btn__cap">10s</span>
+              <el-icon><CaretRight /></el-icon>
+            </button>
+          </div>
+
+          <div class="dock-tools">
+            <button
+              v-if="lyricLines.length"
+              type="button"
+              class="dock-tool-text"
+              @click="lyricsExpanded = !lyricsExpanded"
+            >
+              {{ lyricsExpanded ? '收起' : '歌词' }}
+            </button>
+            <button type="button" class="dock-close" aria-label="关闭播放器" @click="player.clear()">
+              <el-icon><Close /></el-icon>
+            </button>
+          </div>
+        </div>
+      </section>
     </div>
-  </div>
+  </Teleport>
 </template>
 
 <style scoped>
-.melodify-player {
+.player-root {
   position: fixed;
-  left: 50%;
-  bottom: 1.05rem;
-  transform: translateX(-50%);
-  z-index: 3000;
-  width: min(34rem, calc(100vw - 1.5rem));
-}
-
-.melodify-player--lyrics-open {
-  width: min(40rem, calc(100vw - 1.5rem));
-}
-
-.player-shell {
-  border-radius: 1.5rem;
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow:
-    0 18px 48px rgba(15, 23, 42, 0.14),
-    0 1px 0 rgba(255, 255, 255, 0.7) inset;
-  backdrop-filter: blur(18px);
-  padding: 0.8rem;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 5000;
   display: flex;
   flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
   gap: 0.65rem;
+  padding-bottom: max(14px, env(safe-area-inset-bottom));
+  pointer-events: none;
 }
 
-.player-shell--expanded {
-  max-height: min(70vh, 23rem);
+.player-root > * {
+  pointer-events: auto;
 }
 
-.player-top {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
+.player-root audio {
+  display: none;
 }
 
-.disc {
-  width: 2.75rem;
-  height: 2.75rem;
-  display: grid;
-  place-items: center;
-  flex: 0 0 auto;
-  border-radius: 50%;
-  color: #fff;
-  font-weight: 900;
-  background:
-    radial-gradient(circle at center, rgba(255, 255, 255, 0.96) 0 12%, transparent 13% 100%),
-    linear-gradient(135deg, #6d5dfc, #22c55e);
-  box-shadow: 0 10px 24px rgba(109, 93, 252, 0.24);
-}
-
-.disc--playing {
-  animation: spin 9s linear infinite;
-}
-
-.track-meta {
-  min-width: 0;
-  flex: 1;
+/* ——歌词面板（在底栏外，不参与底栏 overflow 裁剪） */
+.dock-lyrics {
+  width: min(640px, calc(100vw - 28px));
+  padding: 0.75rem 1rem 0.95rem;
+  max-height: min(38vh, 15.5rem);
   display: flex;
   flex-direction: column;
-  gap: 0.1rem;
+  gap: 0.45rem;
+  border-radius: var(--melodify-radius-lg);
+  box-sizing: border-box;
 }
 
-.track-meta .t {
-  font-weight: 800;
-  color: var(--melodify-strong, #0f172a);
-  white-space: nowrap;
+.dock-lyrics__hint {
+  margin: 0;
+  font-size: 0.68rem;
+  color: var(--melodify-subtle);
+}
+
+.dock-lyrics__scroll {
+  overflow-y: auto;
+  margin: 0 -0.15rem;
+  padding: 0 0.15rem;
+  max-height: calc(min(38vh, 15.5rem) - 2rem);
+  scrollbar-width: thin;
+}
+
+.dock-lyrics__line {
+  margin: 0;
+  padding: 0.42rem 0.55rem;
+  border-radius: var(--melodify-radius-sm);
+  font-size: 0.86rem;
+  line-height: 1.52;
+  color: var(--melodify-muted);
+}
+
+.dock-lyrics__line--on {
+  color: var(--el-color-primary);
+  font-weight: 700;
+  background: color-mix(in srgb, var(--el-color-primary-light-9) 88%, transparent);
+}
+
+/* ——底栏 Spotify 式实心块（圆角 capsule） */
+.dock-bar {
+  width: min(640px, calc(100vw - 28px));
+  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(0, 0, 0, 0.09);
+  border-radius: var(--melodify-radius-lg);
+  box-shadow:
+    0 10px 40px rgba(0, 0, 0, 0.1),
+    0 4px 12px rgba(0, 0, 0, 0.04);
+  backdrop-filter: saturate(140%) blur(18px);
   overflow: hidden;
-  text-overflow: ellipsis;
+  isolation: isolate;
 }
 
-.track-meta .s {
-  font-size: 0.78rem;
-  color: var(--melodify-muted, #64748b);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.track-meta .time {
-  font-size: 0.72rem;
-  color: var(--melodify-muted, #94a3b8);
-  font-variant-numeric: tabular-nums;
-}
-
-.player-actions {
+.dock-progress {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  flex-shrink: 0;
+  gap: 0.62rem;
+  padding: 0.55rem 0.95rem 0.35rem;
+  border-bottom: 1px solid var(--melodify-divider, rgba(0, 0, 0, 0.06));
 }
 
-.seek-wrap {
+.dock-time {
+  flex: none;
+  width: 2.85rem;
+  font-size: 0.688rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--melodify-muted);
+}
+
+.dock-time:last-child {
+  text-align: right;
+}
+
+.dock-track-hit {
   position: relative;
-  padding: 0.25rem 0;
+  flex: 1;
+  min-width: 0;
+  height: 1.65rem;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  border-radius: 999px;
+  outline: none;
 }
 
-.seek-bg {
+.dock-track-hit:focus-within {
+  box-shadow: 0 0 0 2px var(--el-color-primary-light-7);
+  border-radius: 999px;
+}
+
+.dock-track {
   position: absolute;
   left: 0;
   right: 0;
   top: 50%;
-  height: 0.42rem;
-  overflow: hidden;
+  height: 5px;
+  margin-top: -2.5px;
   border-radius: 999px;
-  transform: translateY(-50%);
-  background: #e5e7eb;
+  background: rgba(0, 0, 0, 0.09);
+  overflow: hidden;
 }
 
-.seek-bg span {
-  display: block;
-  height: 100%;
+.dock-track__fill {
+  position: absolute;
+  inset: 0;
   border-radius: inherit;
-  background: linear-gradient(90deg, #3b82f6, #6d5dfc);
+  transform-origin: left center;
+  background: linear-gradient(
+    90deg,
+    var(--el-color-primary-light-7),
+    var(--el-color-primary)
+  );
+  will-change: transform;
 }
 
-.seek {
-  position: relative;
-  z-index: 1;
-  display: block;
+/* 透明 range 叠在轨道上，拖拽命中区大且不「画出界」 */
+.dock-range {
+  position: absolute;
+  inset: 0;
   width: 100%;
-  height: 1rem;
+  height: 100%;
   margin: 0;
   opacity: 0;
-  accent-color: var(--el-color-primary);
   cursor: pointer;
+  z-index: 2;
 }
 
-.lyrics-block {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  min-height: 0;
-  flex: 1;
+.dock-main {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.7rem 0.95rem 0.85rem;
+  min-height: 3.85rem;
 }
 
-.lyrics-hint {
-  margin: 0;
-  font-size: 0.7rem;
-  color: #94a3b8;
-  line-height: 1.4;
+.dock-cover-wrap {
+  flex: none;
 }
 
-.lyrics-scroll {
-  overflow-y: auto;
-  max-height: 11.5rem;
-  padding: 0.25rem;
-  border-radius: 1rem;
-  background: #f8fafc;
-  scrollbar-width: thin;
-}
-
-.lyrics-line {
-  margin: 0;
-  padding: 0.45rem 0.65rem;
-  border-radius: 0.75rem;
-  font-size: 0.88rem;
-  line-height: 1.55;
-  color: var(--melodify-muted, #64748b);
-  transition:
-    color 0.15s ease,
-    background 0.15s ease;
-}
-
-.lyrics-line--active {
-  color: #2563eb;
+.dock-cover {
+  width: 3.1rem;
+  height: 3.1rem;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  font-size: 1.2rem;
   font-weight: 800;
-  background: #eef2ff;
-}
-
-.icon-btn {
-  border: none;
-  border-radius: 999px;
-  padding: 0.42rem 0.9rem;
-  font: inherit;
-  font-weight: 800;
-  cursor: pointer;
-  background: linear-gradient(135deg, #3b82f6, #6d5dfc);
   color: #fff;
-  box-shadow: 0 10px 20px rgba(59, 130, 246, 0.2);
+  background:
+    radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.3) 0 45%, transparent 46%),
+    linear-gradient(145deg, var(--el-color-primary-light-5), var(--el-color-primary));
+  box-shadow: 0 4px 14px rgba(var(--melodify-primary-rgb), 0.32);
 }
 
-.icon-btn.ghost {
-  background: #f1f5f9;
-  color: var(--melodify-strong, #0f172a);
-  box-shadow: none;
+.dock-cover--live {
+  box-shadow:
+    0 4px 16px rgba(var(--melodify-primary-rgb), 0.35),
+    0 0 0 2px color-mix(in srgb, var(--el-color-primary-light-9) 70%, transparent);
 }
 
-audio {
-  display: none;
+.dock-info {
+  min-width: 0;
+  flex: none;
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+.dock-title {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--melodify-strong);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dock-sub {
+  margin: 0.1rem 0 0;
+  font-size: 0.75rem;
+  color: var(--melodify-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dock-transport {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.dock-play {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  border: none;
+  cursor: pointer;
+  color: #fff;
+  background: var(--el-color-primary);
+  box-shadow: 0 6px 16px rgba(var(--melodify-primary-rgb), 0.3);
+  transition:
+    transform 0.12s ease,
+    background-color 0.15s ease;
+}
+
+.dock-play:hover {
+  transform: scale(1.06);
+  background-color: color-mix(in srgb, var(--el-color-primary) 88%, black);
+}
+
+.dock-play:active {
+  transform: scale(0.98);
+}
+
+.dock-icon-btn {
+  height: 2.65rem;
+  min-width: 2.95rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: rgba(245, 245, 246, 0.95);
+  color: var(--melodify-strong);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-size: 0.625rem;
+  font-weight: 800;
+}
+
+.dock-icon-btn:hover {
+  background: rgba(237, 237, 240, 1);
+}
+
+.dock-icon-btn__cap {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.85;
+  letter-spacing: -0.02em;
+}
+
+.dock-tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.dock-tool-text {
+  padding: 0.35rem 0.55rem;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.78rem;
+  color: var(--el-color-primary);
+  background: transparent;
+}
+
+.dock-tool-text:hover {
+  background: var(--el-color-primary-light-9);
+}
+
+.dock-close {
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--melodify-muted);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.dock-close:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--melodify-strong);
 }
 
 @media (max-width: 520px) {
-  .player-top {
-    align-items: flex-start;
-  }
-
-  .player-actions {
-    flex-direction: column;
-  }
-
-  .icon-btn {
+  .dock-progress {
     padding-inline: 0.75rem;
+    gap: 0.42rem;
+  }
+
+  .dock-main {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 0.5rem 0.6rem;
+    padding: 0.65rem 0.82rem 0.75rem;
+  }
+
+  .dock-cover-wrap {
+    flex: none;
+  }
+
+  .dock-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .dock-tools {
+    flex: none;
+    margin-left: auto;
+    align-self: center;
+    display: flex;
+    align-items: center;
+  }
+
+  .dock-transport {
+    width: 100%;
+    justify-content: center;
+    order: 9;
+    margin-top: 0.08rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .dock-time {
+    width: 2.65rem;
+    font-size: 0.65rem;
+  }
+
+  .dock-icon-btn__cap {
+    display: none;
+  }
+
+  .dock-icon-btn {
+    min-width: 2.55rem;
   }
 }
 </style>

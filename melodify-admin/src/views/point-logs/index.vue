@@ -4,6 +4,7 @@ import { onMounted, reactive } from 'vue'
 import type { PointLog } from '@/types/api'
 import * as adminPointLogsApi from '@/api/adminPointLogs'
 import { ADMIN_MAX_PAGE_SIZE, useAdminPaging } from '@/composables/useAdminPaging'
+import { formatDateTimeZh } from '@/utils/formatDateTime'
 import { shortenText } from '@/utils/text'
 
 defineOptions({ name: 'AdminPointLogsPage' })
@@ -52,7 +53,11 @@ onMounted(() => loadList())
       <el-table-column label="备注" min-width="160">
         <template #default="{ row }">{{ shortenText(row.remark ?? '', 48) }}</template>
       </el-table-column>
-      <el-table-column prop="createTime" label="时间" min-width="158" />
+      <el-table-column label="时间" min-width="172">
+        <template #default="{ row }">
+          {{ formatDateTimeZh(row.createTime) }}
+        </template>
+      </el-table-column>
     </el-table>
     <el-pagination
       class="admin-pager"

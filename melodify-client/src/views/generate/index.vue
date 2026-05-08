@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * AI 创作：提交生成请求 → 轮询任务 → 成功后拉取成品 URL 并用 audio 试听。
+ * AI 创作：提交生成请求 → 轮询任务 → 成功后拉取成品并由底部全局播放器试听。
  */
 import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage } from 'element-plus'
@@ -8,7 +8,7 @@ import { computed, onUnmounted, reactive, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { getMusicAssetByBusinessTask } from '@/api/musicAssets'
 import { getMusicTaskByBusinessId, submitMusicGenerate } from '@/api/musicTasks'
-import { usePlayerStore } from '@/stores/player'
+import { usePlayerStore, type PlayerTrack } from '@/stores/player'
 import { MUSIC_TASK_STATUS, musicTaskStatusText } from '@/types/musicTask'
 import { unwrapResult } from '@/utils/apiResult'
 import { showSubmitError } from '@/utils/showSubmitError'
@@ -42,7 +42,7 @@ const pollTimer = ref<ReturnType<typeof setInterval> | null>(null)
 
 const busyTaskBizId = ref<string | null>(null)
 const statusLabel = ref('')
-const audioUrl = ref<string | null>(null)
+const completedPlayback = ref<PlayerTrack | null>(null)
 const errorDetail = ref('')
 
 const form = reactive({
@@ -64,10 +64,15 @@ const lyricsMaxLen = 5000
 
 const statusType = computed(() => {
   if (errorDetail.value) return 'danger'
-  if (audioUrl.value) return 'success'
+  if (completedPlayback.value) return 'success'
   if (busyTaskBizId.value) return 'warning'
   return 'info'
 })
+
+function replayCompletedPlayback() {
+  const t = completedPlayback.value
+  if (t) player.playTrack({ ...t })
+}
 
 const applyExample = (text: string) => {
   form.prompt = text
@@ -160,8 +165,7 @@ const pollOnce = async (taskBizId: string): Promise<boolean> => {
       stopPoll()
       try {
         const asset = unwrapResult(await getMusicAssetByBusinessTask(taskBizId))
-        audioUrl.value = asset.fileUrl
-        player.playTrack({
+        const track: PlayerTrack = {
           title:
             form.title.trim() ||
             (form.customMode && !form.instrumental ?
@@ -176,7 +180,9 @@ const pollOnce = async (taskBizId: string): Promise<boolean> => {
             lyrics: form.lyrics,
           }),
           durationSec: asset.durationSec ?? undefined,
-        })
+        }
+        completedPlayback.value = track
+        player.playTrack(track)
         ElMessage.success('生成完成，可以试听')
       } catch (e) {
         showSubmitError(e, '已完成但暂无法加载音频，请稍后在作品列表中查看')
@@ -215,7 +221,7 @@ const onSubmit = async () => {
   if (!(await validateFormRef(formRef))) return
   if (!validateBusinessRules()) return
   submitting.value = true
-  audioUrl.value = null
+  completedPlayback.value = null
   errorDetail.value = ''
   stopPoll()
 
@@ -256,7 +262,7 @@ const onSubmit = async () => {
         <p class="page-eyebrow">Create</p>
         <h1 class="page-title page-title--lg">创作音乐</h1>
         <p class="page-desc page-desc--wide">
-          从一句灵感开始，选择模型和模式后提交生成；完成后可在这里试听，也会进入作品库。
+          从一句灵感开始，选择模型和模式后提交生成；完成后将由底部播放条试听，成品也会进入作品库。
         </p>
       </div>
       <RouterLink class="primary-pill-link" to="/works">查看作品库</RouterLink>
@@ -396,9 +402,9 @@ const onSubmit = async () => {
             <code>{{ busyTaskBizId }}</code>
           </div>
           <p v-if="errorDetail" class="status-error">{{ errorDetail }}</p>
-          <div v-if="audioUrl" class="audio-card">
-            <p>生成完成，可以试听</p>
-            <audio controls class="preview-audio" :src="audioUrl" preload="none" />
+          <div v-if="completedPlayback" class="play-complete-row">
+            <p>已在底部播放器开始试听。</p>
+            <el-button type="primary" link @click="replayCompletedPlayback">再播一次</el-button>
           </div>
         </section>
 
@@ -454,7 +460,7 @@ const onSubmit = async () => {
 }
 
 .model-option strong {
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .model-option span {
@@ -470,21 +476,40 @@ const onSubmit = async () => {
 }
 
 .prompt-chip {
-  border: 1px solid rgba(99, 102, 241, 0.18);
+  border: 1px solid rgba(var(--melodify-primary-rgb), 0.14);
   border-radius: 999px;
-  background: #f8fafc;
+  background: var(--melodify-surface-sunken, #f3efe6);
   color: var(--el-color-primary);
   padding: 0.45rem 0.75rem;
   cursor: pointer;
   font-size: 0.85rem;
   font-family: inherit;
+  font-weight: 600;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.12s ease;
+}
+
+.prompt-chip:hover {
+  background: var(--el-color-primary-light-9);
+  border-color: rgba(var(--melodify-primary-rgb), 0.28);
+}
+
+.prompt-chip:active {
+  transform: scale(0.98);
+}
+
+.prompt-chip:focus-visible {
+  outline: 2px solid var(--el-color-primary);
+  outline-offset: 2px;
 }
 
 .custom-box {
   padding: 1rem;
-  border-radius: 1rem;
-  background: #f8fafc;
-  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: var(--melodify-radius-lg, 1rem);
+  background: #faf8f5;
+  border: 1px solid rgba(100, 92, 85, 0.14);
 }
 
 .submit-row {
@@ -517,9 +542,9 @@ const onSubmit = async () => {
 .status-head h2,
 .tips-card h2 {
   margin: 0;
-  color: var(--melodify-strong);
+  color: var(--melodify-classical-ink, var(--melodify-strong));
   font-size: 1.05rem;
-  font-weight: 900;
+  font-weight: 700;
 }
 
 .status-head p {
@@ -534,7 +559,7 @@ const onSubmit = async () => {
   margin-top: 0.35rem;
   border-radius: 999px;
   background: var(--el-color-info);
-  box-shadow: 0 0 0 0.35rem rgba(148, 163, 184, 0.12);
+  box-shadow: 0 0 0 0.35rem rgba(122, 95, 71, 0.1);
 }
 
 .status-disc--success {
@@ -553,7 +578,8 @@ const onSubmit = async () => {
   margin-top: 1rem;
   padding: 0.85rem;
   border-radius: 0.9rem;
-  background: #f8fafc;
+  background: var(--melodify-surface-sunken, #f3efe6);
+  border: 1px solid var(--melodify-divider, rgba(58, 48, 40, 0.1));
 }
 
 .task-id span {
@@ -574,20 +600,22 @@ const onSubmit = async () => {
   color: var(--el-color-danger);
 }
 
-.audio-card {
+.play-complete-row {
   margin-top: 1rem;
   padding-top: 1rem;
-  border-top: 1px solid rgba(148, 163, 184, 0.18);
+  border-top: 1px solid var(--melodify-divider-strong, rgba(58, 48, 40, 0.12));
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.35rem 1rem;
 }
 
-.audio-card p {
+.play-complete-row p {
+  margin: 0;
   color: var(--melodify-strong);
-  font-weight: 800;
-  margin-bottom: 0.6rem;
-}
-
-.preview-audio {
-  width: 100%;
+  font-weight: 600;
+  font-size: 0.875rem;
 }
 
 .tips-card ol {

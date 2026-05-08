@@ -43,12 +43,20 @@ defineOptions({ name: 'AboutPage' })
 
 .about section {
   padding: 1.25rem;
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.about section:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--melodify-shadow-hover);
 }
 
 .about h2 {
-  color: var(--melodify-strong);
+  color: var(--melodify-classical-ink, var(--melodify-strong));
   font-size: 1.05rem;
-  font-weight: 900;
+  font-weight: 700;
   margin-bottom: 0.45rem;
 }
 

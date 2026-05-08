@@ -2,16 +2,18 @@
 /**
  * 我的作品：分页展示当前用户的 music_task；已完成项可按业务编号拉取成品试听。
  */
-import { ElMessage } from 'element-plus'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { getMusicAssetByBusinessTask } from '@/api/musicAssets'
 import { pageMusicTasks } from '@/api/musicTasks'
 import type { MusicTask } from '@/types/musicTask'
 import { MUSIC_TASK_STATUS, musicTaskStatusText } from '@/types/musicTask'
+import { usePlayerStore } from '@/stores/player'
 import { unwrapResult } from '@/utils/apiResult'
 import { formatDateTimeZh } from '@/utils/formatDateTime'
+import { downloadAudioByFileUrl } from '@/utils/downloadAudio'
 import { showSubmitError } from '@/utils/showSubmitError'
+import { extractTrackLyrics } from '@/utils/trackLyrics'
 
 defineOptions({ name: 'WorksPage' })
 
@@ -21,11 +23,14 @@ const total = ref(0)
 const pager = reactive({ current: 1, size: 10 })
 const statusFilter = ref<number | 'all'>('all')
 const router = useRouter()
+const player = usePlayerStore()
 
-/** 试听地址缓存（业务 task_id -> fileUrl） */
-const previewUrls = reactive<Record<string, string>>({})
-const detailIds = reactive<Record<string, number>>({})
-const fetchingAudio = reactive<Record<string, boolean>>({})
+/** 业务 task_id → 成品缓存（详情页跳转、底部播放器共用） */
+const taskPreviewCache = reactive<
+  Record<string, { assetId: number; fileUrl: string; durationSec?: number | null }>
+>({})
+const fetchingPreview = reactive<Record<string, boolean>>({})
+const downloadingBiz = reactive<Record<string, boolean>>({})
 
 const statusOptions = [
   { label: '全部', value: 'all' },
@@ -84,35 +89,65 @@ function statusClass(status: number | null | undefined) {
   return 'info'
 }
 
-function copyBizId(taskId: string) {
-  void navigator.clipboard.writeText(taskId).then(
-    () => ElMessage.success('任务号已复制'),
-    () => ElMessage.warning('复制失败，请手动选择复制'),
-  )
-}
-
-async function loadPreview(task: MusicTask) {
+async function ensureTaskPreview(task: MusicTask) {
   const biz = task.taskId
-  if (previewUrls[biz]) return
-  fetchingAudio[biz] = true
+  const cached = taskPreviewCache[biz]
+  if (cached) return cached
+  fetchingPreview[biz] = true
   try {
     const asset = unwrapResult(await getMusicAssetByBusinessTask(biz))
-    previewUrls[biz] = asset.fileUrl
-    detailIds[biz] = asset.id
+    const entry = {
+      assetId: asset.id,
+      fileUrl: asset.fileUrl,
+      durationSec: asset.durationSec,
+    }
+    taskPreviewCache[biz] = entry
+    return entry
+  } finally {
+    fetchingPreview[biz] = false
+  }
+}
+
+async function playPreview(task: MusicTask) {
+  try {
+    const p = await ensureTaskPreview(task)
+    player.playTrack({
+      title: shorten(task.prompt ?? '未命名作品', 160) || '未命名作品',
+      fileUrl: p.fileUrl,
+      subtitle: task.modelCode ?? '',
+      lyrics: extractTrackLyrics(task.prompt ?? '', task.params ?? null) || undefined,
+      durationSec: p.durationSec ?? undefined,
+    })
   } catch (e) {
     showSubmitError(e, '成品暂不可用，请稍后重试')
-  } finally {
-    fetchingAudio[biz] = false
   }
 }
 
 async function openDetail(task: MusicTask) {
-  if (!detailIds[task.taskId]) {
-    await loadPreview(task)
+  try {
+    const p = await ensureTaskPreview(task)
+    await router.push(`/works/${p.assetId}`)
+  } catch (e) {
+    showSubmitError(e, '成品暂不可用，请稍后重试')
   }
-  const id = detailIds[task.taskId]
-  if (id) {
-    await router.push(`/works/${id}`)
+}
+
+async function downloadPreview(task: MusicTask) {
+  const biz = task.taskId
+  try {
+    const p = await ensureTaskPreview(task)
+    downloadingBiz[biz] = true
+    try {
+      await downloadAudioByFileUrl(
+        p.fileUrl,
+        shorten(task.prompt ?? '未命名作品', 160) || '未命名作品',
+      )
+    } finally {
+      downloadingBiz[biz] = false
+    }
+  } catch (e) {
+    downloadingBiz[biz] = false
+    showSubmitError(e, '下载失败，请稍后重试')
   }
 }
 </script>
@@ -123,7 +158,10 @@ async function openDetail(task: MusicTask) {
       <div>
         <p class="page-eyebrow">Library</p>
         <h1 class="page-title page-title--lg">我的作品</h1>
-        <p class="page-desc page-desc--wide">按时间倒序列出你的生成任务；完成后可在此处试听、复制任务号和查看失败原因。</p>
+        <p class="page-desc page-desc--wide">
+          按时间倒序列出你的生成任务；完成后可试听（底部播放条）、下载成片或查看详情。成片音频以链接形式存库，文件可能在
+          Suno 侧或由后台镜像到本服务的 <code>/api/media/audio/</code> 目录。
+        </p>
       </div>
       <div class="head-actions">
         <el-button round :loading="loading" @click="fetchList">刷新</el-button>
@@ -191,7 +229,22 @@ async function openDetail(task: MusicTask) {
                   <span class="meta-pair"><span class="meta-label">消耗</span>{{ row.costPoints ?? '—' }} 积分</span>
                 </div>
                 <div class="meta-actions">
-                  <button type="button" @click="copyBizId(row.taskId)">复制任务号</button>
+                  <button
+                    v-if="row.status === MUSIC_TASK_STATUS.SUCCEEDED"
+                    type="button"
+                    :disabled="!!fetchingPreview[row.taskId]"
+                    @click.stop="playPreview(row)"
+                  >
+                    {{ fetchingPreview[row.taskId] ? '加载中…' : '收听' }}
+                  </button>
+                  <button
+                    v-if="row.status === MUSIC_TASK_STATUS.SUCCEEDED"
+                    type="button"
+                    :disabled="!!fetchingPreview[row.taskId] || !!downloadingBiz[row.taskId]"
+                    @click.stop="downloadPreview(row)"
+                  >
+                    {{ downloadingBiz[row.taskId] ? '下载中…' : '下载' }}
+                  </button>
                   <button
                     v-if="row.status === MUSIC_TASK_STATUS.SUCCEEDED"
                     type="button"
@@ -203,30 +256,15 @@ async function openDetail(task: MusicTask) {
               </div>
             </div>
 
-            <div class="work-footer">
-              <template v-if="row.status === MUSIC_TASK_STATUS.SUCCEEDED">
-                <div class="audio-row">
-                  <audio
-                    v-if="previewUrls[row.taskId]"
-                    controls
-                    class="preview-audio"
-                    preload="none"
-                    :src="previewUrls[row.taskId]"
-                  />
-                  <el-button
-                    v-else
-                    type="primary"
-                    round
-                    size="small"
-                    :loading="!!fetchingAudio[row.taskId]"
-                    @click="loadPreview(row)"
-                  >
-                    加载试听
-                  </el-button>
-                </div>
-              </template>
-
-              <p v-else-if="row.status === MUSIC_TASK_STATUS.FAILED" class="err-cell">
+            <div
+              v-if="
+                row.status === MUSIC_TASK_STATUS.FAILED ||
+                row.status === MUSIC_TASK_STATUS.QUEUED ||
+                row.status === MUSIC_TASK_STATUS.GENERATING
+              "
+              class="work-footer"
+            >
+              <p v-if="row.status === MUSIC_TASK_STATUS.FAILED" class="err-cell">
                 {{ [row.errorCode, row.errorMessage].filter(Boolean).join(': ') || '未知失败原因' }}
               </p>
 
@@ -236,7 +274,7 @@ async function openDetail(task: MusicTask) {
                 "
                 class="work-footer-hint"
               >
-                生成完成后将显示试听与播放控制。
+                生成完成后可「收听」「下载」或前往详情。
               </p>
             </div>
           </div>
@@ -270,6 +308,14 @@ async function openDetail(task: MusicTask) {
 
 .summary-card {
   padding: 1.1rem 1.25rem;
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.summary-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--melodify-shadow-hover);
 }
 
 .summary-card span {
@@ -304,8 +350,23 @@ async function openDetail(task: MusicTask) {
 }
 
 .empty-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.45rem 0.85rem;
+  border-radius: var(--melodify-radius-sm);
   color: var(--el-color-primary);
-  font-weight: 800;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.empty-link:hover {
+  text-decoration: underline;
+}
+
+.empty-link:focus-visible {
+  outline: 2px solid var(--el-color-primary);
+  outline-offset: 3px;
 }
 
 .work-list {
@@ -313,10 +374,10 @@ async function openDetail(task: MusicTask) {
   flex-direction: column;
   gap: 0;
   border-radius: 1.1rem;
-  border: 1px solid rgba(148, 163, 184, 0.16);
-  background: #ffffff;
+  border: 1px solid var(--melodify-divider-strong, rgba(58, 48, 40, 0.12));
+  background: transparent;
   overflow: hidden;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  box-shadow: none;
 }
 
 .work-item {
@@ -328,7 +389,7 @@ async function openDetail(task: MusicTask) {
   border-radius: 0;
   background: transparent;
   border: none;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+  border-bottom: 1px solid var(--melodify-divider, rgba(58, 48, 40, 0.1));
   transition: background-color 0.15s ease;
 }
 
@@ -337,7 +398,7 @@ async function openDetail(task: MusicTask) {
 }
 
 .work-item:hover {
-  background-color: rgba(248, 250, 252, 0.85);
+  background-color: var(--melodify-surface-muted, #f4f4f5);
 }
 
 .cover {
@@ -347,15 +408,15 @@ async function openDetail(task: MusicTask) {
   display: grid;
   place-items: center;
   border-radius: 1.1rem;
-  color: #6d5dfc;
-  background: #f5f3ff;
+  color: var(--el-color-primary);
+  background: color-mix(in srgb, var(--el-color-primary-light-9) 88%, var(--melodify-surface-sunken));
   box-shadow:
-    inset 0 0 0 1px rgba(109, 93, 252, 0.12),
-    0 1px 3px rgba(15, 23, 42, 0.04);
+    inset 0 0 0 1px rgba(var(--melodify-primary-rgb), 0.12),
+    0 1px 3px rgba(38, 31, 26, 0.04);
 }
 
 .cover span {
-  font-weight: 900;
+  font-weight: 700;
 }
 
 .cover--success {
@@ -404,9 +465,9 @@ async function openDetail(task: MusicTask) {
 
 .work-title-row h2 {
   margin: 0;
-  color: var(--melodify-strong);
+  color: var(--melodify-classical-ink, var(--melodify-strong));
   font-size: 1.06rem;
-  font-weight: 800;
+  font-weight: 700;
   line-height: 1.42;
   letter-spacing: -0.02em;
 }
@@ -422,7 +483,7 @@ async function openDetail(task: MusicTask) {
   flex: none;
   font-size: 0.74rem;
   font-weight: 600;
-  color: rgb(148, 163, 184);
+  color: var(--melodify-subtle);
   letter-spacing: 0.06em;
 }
 
@@ -430,7 +491,7 @@ async function openDetail(task: MusicTask) {
   font-size: 0.8325rem;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.04em;
-  color: rgb(100, 116, 139);
+  color: var(--melodify-muted);
   word-break: keep-all;
 }
 
@@ -442,7 +503,7 @@ async function openDetail(task: MusicTask) {
 .prompt-text {
   margin: 0;
   padding-left: 0.65rem;
-  border-left: 3px solid rgba(109, 93, 252, 0.22);
+  border-left: 3px solid rgba(var(--melodify-primary-rgb), 0.22);
   color: var(--melodify-muted);
   font-size: 0.875rem;
   line-height: 1.72;
@@ -469,12 +530,12 @@ async function openDetail(task: MusicTask) {
 
 .meta-pair .meta-label {
   margin-right: 0.2rem;
-  color: rgb(148, 163, 184);
+  color: var(--melodify-subtle);
   font-weight: 500;
 }
 
 .meta-dot {
-  color: rgb(203, 213, 225);
+  color: color-mix(in srgb, var(--melodify-subtle) 55%, #d4ccc0);
   user-select: none;
   padding: 0 0.08rem;
 }
@@ -487,19 +548,39 @@ async function openDetail(task: MusicTask) {
 }
 
 .meta-row button {
-  border: none;
-  background: transparent;
+  border: 1px solid rgba(var(--melodify-primary-rgb), 0.14);
+  background: rgba(var(--melodify-primary-rgb), 0.06);
   color: var(--el-color-primary);
   font: inherit;
-  font-size: inherit;
-  font-weight: 700;
+  font-weight: 600;
+  font-size: 0.8125rem;
   cursor: pointer;
-  padding: 0;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.12s ease;
 }
 
 .meta-row button:hover {
-  text-decoration: underline;
-  text-underline-offset: 2px;
+  background: rgba(var(--melodify-primary-rgb), 0.11);
+  border-color: rgba(var(--melodify-primary-rgb), 0.22);
+}
+
+.meta-row button:active {
+  transform: scale(0.98);
+}
+
+.meta-row button:focus-visible {
+  outline: 2px solid var(--el-color-primary);
+  outline-offset: 2px;
+}
+
+.meta-row button:disabled {
+  opacity: 0.62;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .work-footer {
@@ -519,16 +600,6 @@ async function openDetail(task: MusicTask) {
   color: var(--melodify-muted);
   font-size: 0.8125rem;
   line-height: 1.5;
-}
-
-.audio-row {
-  margin: 0;
-}
-
-.preview-audio {
-  width: 100%;
-  max-width: min(34rem, 100%);
-  vertical-align: middle;
 }
 
 .err-cell {

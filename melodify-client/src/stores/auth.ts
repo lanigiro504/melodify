@@ -101,6 +101,11 @@ export const useAuthStore = defineStore('auth', () => {
     return refreshMe()
   }
 
+  const uploadAvatar = async (file: File) => {
+    unwrapResult(await usersApi.uploadMyAvatar(file))
+    return refreshMe()
+  }
+
   /** 清除内存与会话存储中的用户信息 */
   const logout = () => {
     currentUser.value = null
@@ -119,6 +124,7 @@ export const useAuthStore = defineStore('auth', () => {
     register,
     refreshMe,
     updateProfile,
+    uploadAvatar,
     logout,
   }
 })
