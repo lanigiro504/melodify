@@ -5,20 +5,32 @@ import com.melodify.constants.MusicTaskStatuses;
 import com.melodify.entity.MusicAsset;
 import com.melodify.entity.MusicTask;
 import com.melodify.entity.RechargeOrder;
+import com.melodify.mapper.AdminDashboardMapper;
 import com.melodify.model.vo.AdminDashboardSummaryVO;
+import com.melodify.model.vo.AdminDashboardTrendsVO;
+import com.melodify.model.vo.MusicTaskStatusCountVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.sql.Date;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
 public class AdminDashboardService {
+
+	private static final DateTimeFormatter DAY_LABEL = DateTimeFormatter.ofPattern("MM-dd");
+
+	/** 仪表盘趋势最多查询天数，防止大区间拖慢库 */
+	private static final int TRENDS_MAX_DAYS = 90;
 
 	/** {@code recharge_order.status}：1 已支付 */
 	private static final int RECHARGE_STATUS_PAID = 1;
@@ -27,6 +39,63 @@ public class AdminDashboardService {
 	private final MusicTaskService musicTaskService;
 	private final MusicAssetService musicAssetService;
 	private final RechargeOrderService rechargeOrderService;
+	private final AdminDashboardMapper adminDashboardMapper;
+
+	public AdminDashboardTrendsVO trends(int requestedDays) {
+		int days = requestedDays;
+		if (days < 1) {
+			days = 1;
+		}
+		if (days > TRENDS_MAX_DAYS) {
+			days = TRENDS_MAX_DAYS;
+		}
+		LocalDate end = LocalDate.now();
+		LocalDate start = end.minusDays(days - 1L);
+		LocalDateTime rangeStart = start.atStartOfDay();
+		LocalDateTime rangeEndExclusive = end.plusDays(1).atStartOfDay();
+
+		Map<LocalDate, Long> createdMap = toDayCountMap(adminDashboardMapper.countMusicTasksCreatedByDay(rangeStart, rangeEndExclusive));
+		Map<LocalDate, Long> okMap = toDayCountMap(adminDashboardMapper.countMusicTasksSucceededByDay(rangeStart, rangeEndExclusive));
+		Map<LocalDate, Long> failMap = toDayCountMap(adminDashboardMapper.countMusicTasksFailedByDay(rangeStart, rangeEndExclusive));
+		Map<LocalDate, Long> regMap = toDayCountMap(adminDashboardMapper.countUsersRegisteredByDay(rangeStart, rangeEndExclusive));
+		Map<LocalDate, long[]> rechargeMap = toDayRechargeMap(
+				adminDashboardMapper.rechargePaidAggByDay(rangeStart, rangeEndExclusive));
+
+		List<String> labels = new ArrayList<>(days);
+		List<Long> created = new ArrayList<>(days);
+		List<Long> succeeded = new ArrayList<>(days);
+		List<Long> failed = new ArrayList<>(days);
+		List<Long> registered = new ArrayList<>(days);
+		List<Long> paidOrders = new ArrayList<>(days);
+		List<Long> paidCents = new ArrayList<>(days);
+		for (LocalDate d = start; !d.isAfter(end); d = d.plusDays(1)) {
+			labels.add(d.format(DAY_LABEL));
+			created.add(createdMap.getOrDefault(d, 0L));
+			succeeded.add(okMap.getOrDefault(d, 0L));
+			failed.add(failMap.getOrDefault(d, 0L));
+			registered.add(regMap.getOrDefault(d, 0L));
+			long[] pr = rechargeMap.getOrDefault(d, new long[] {0L, 0L});
+			paidOrders.add(pr[0]);
+			paidCents.add(pr[1]);
+		}
+
+		List<MusicTaskStatusCountVO> distribution = new ArrayList<>();
+		for (Map<String, Object> row : adminDashboardMapper.countMusicTasksGroupByStatus()) {
+			int st = ((Number) row.get("s")).intValue();
+			long cnt = ((Number) row.get("c")).longValue();
+			distribution.add(new MusicTaskStatusCountVO(st, cnt));
+		}
+
+		return new AdminDashboardTrendsVO(
+				labels,
+				created,
+				succeeded,
+				failed,
+				registered,
+				paidOrders,
+				paidCents,
+				distribution);
+	}
 
 	public AdminDashboardSummaryVO summary() {
 		LocalDate today = LocalDate.now();
@@ -85,5 +154,70 @@ public class AdminDashboardService {
 				centSum,
 				yuanApprox,
 				publicAssets);
+	}
+
+	private static Map<LocalDate, Long> toDayCountMap(List<Map<String, Object>> rows) {
+		Map<LocalDate, Long> m = new LinkedHashMap<>();
+		if (rows == null) {
+			return m;
+		}
+		for (Map<String, Object> row : rows) {
+			LocalDate d = toLocalDate(row.get("d"));
+			if (d == null) {
+				continue;
+			}
+			m.put(d, ((Number) row.get("c")).longValue());
+		}
+		return m;
+	}
+
+	private static Map<LocalDate, long[]> toDayRechargeMap(List<Map<String, Object>> rows) {
+		Map<LocalDate, long[]> m = new LinkedHashMap<>();
+		if (rows == null) {
+			return m;
+		}
+		for (Map<String, Object> row : rows) {
+			LocalDate d = toLocalDate(row.get("d"));
+			if (d == null) {
+				continue;
+			}
+			long cnt = ((Number) row.get("cnt")).longValue();
+			long cents = toLongMoney(row.get("cents"));
+			m.put(d, new long[] {cnt, cents});
+		}
+		return m;
+	}
+
+	private static long toLongMoney(Object v) {
+		if (v == null) {
+			return 0L;
+		}
+		if (v instanceof BigDecimal bd) {
+			return bd.longValue();
+		}
+		if (v instanceof Number n) {
+			return n.longValue();
+		}
+		return Long.parseLong(v.toString());
+	}
+
+	private static LocalDate toLocalDate(Object o) {
+		if (o == null) {
+			return null;
+		}
+		if (o instanceof LocalDate ld) {
+			return ld;
+		}
+		if (o instanceof Date sd) {
+			return sd.toLocalDate();
+		}
+		if (o instanceof java.util.Date ud) {
+			return new Date(ud.getTime()).toLocalDate();
+		}
+		String s = o.toString();
+		if (s.length() >= 10) {
+			return LocalDate.parse(s.substring(0, 10));
+		}
+		return null;
 	}
 }
