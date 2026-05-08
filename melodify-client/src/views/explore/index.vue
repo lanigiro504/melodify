@@ -143,20 +143,18 @@ onMounted(() => void fetchList())
 
 <template>
   <div class="page-stack explore-page">
-    <section class="melodify-glass-card explore-hero">
-      <div class="explore-hero-head">
+    <section class="explore-intro">
+      <div class="explore-intro__head">
         <div>
-          <p class="page-eyebrow">Explore</p>
-          <h1 class="page-title page-title--lg">作品广场</h1>
-          <p class="page-desc page-desc--wide">
-            公开作品可<strong>免费试听</strong>；登录后可<strong>点赞</strong>。支持标题/描述搜索与按热度排序。
-          </p>
+          <p class="page-eyebrow">作品广场</p>
+          <h1 class="page-title page-title--lg">浏览公开作品</h1>
+          <p class="page-desc page-desc--wide">任意公开作品可免费试听；登录后可点赞，支持关键词与最热排序。</p>
         </div>
       </div>
       <div class="explore-toolbar">
         <el-input
           v-model="filters.keyword"
-          placeholder="搜索标题或创作描述（自动搜索，也可按回车立即查询）"
+          placeholder="标题或描述关键词"
           clearable
           class="explore-search"
           :prefix-icon="Search"
@@ -172,8 +170,8 @@ onMounted(() => void fetchList())
           <el-option :value="24" label="每页 24 条" />
           <el-option :value="36" label="每页 36 条" />
         </el-select>
-        <el-button type="primary" round :loading="loading" @click="applySearch">立即搜索</el-button>
-        <el-button round :loading="loading" @click="fetchList">刷新</el-button>
+        <el-button type="primary" :loading="loading" @click="applySearch">搜索</el-button>
+        <el-button :loading="loading" @click="fetchList">刷新</el-button>
       </div>
     </section>
 
@@ -187,7 +185,7 @@ onMounted(() => void fetchList())
         </div>
       </el-empty>
 
-      <article v-for="item in rows" :key="item.id" class="explore-card soft-card">
+      <article v-for="item in rows" :key="item.id" class="explore-card">
         <div class="explore-card__cover">
           <span class="explore-card__abbr">{{ (item.title || item.prompt || 'AI').slice(0, 2) }}</span>
         </div>
@@ -202,17 +200,16 @@ onMounted(() => void fetchList())
             </span>
           </div>
           <div class="explore-card__actions">
-            <el-button type="primary" round size="small" @click="onPlay(item)">播放</el-button>
+            <el-button type="primary" size="small" @click="onPlay(item)">播放</el-button>
             <template v-if="isAuthenticated">
               <el-button
-                round
                 size="small"
-                :type="item.liked ? 'warning' : 'default'"
-                :plain="!item.liked"
+                link
+                :type="item.liked ? 'primary' : 'default'"
                 :loading="likeBusyId === item.id"
                 @click="toggleLike(item)"
               >
-                {{ item.liked ? '已点赞' : '点赞' }}
+                {{ item.liked ? '已赞' : '点赞' }}
               </el-button>
             </template>
             <RouterLink v-else class="like-login-hint" to="/login?redirect=/explore">登录后点赞</RouterLink>
@@ -240,74 +237,66 @@ onMounted(() => void fetchList())
 </template>
 
 <style scoped>
-.explore-hero {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+.explore-intro {
+  padding-bottom: 1.25rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid var(--melodify-border, #e5e7eb);
 }
 
-.explore-hero-head {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 1rem;
-  align-items: flex-start;
+.explore-intro__head {
+  margin-bottom: 1rem;
 }
 
 .explore-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(17.5rem, 1fr));
-  gap: 1.15rem;
-  margin-top: 1rem;
+  gap: 1rem;
 }
 
 .explore-card {
   display: grid;
-  grid-template-columns: 4.75rem minmax(0, 1fr);
-  gap: 1rem;
-  padding: 1.05rem 1.15rem;
-  border-radius: 1.15rem;
-  transition:
-    box-shadow 0.22s ease,
-    border-color 0.22s ease,
-    transform 0.18s ease;
+  grid-template-columns: 4rem minmax(0, 1fr);
+  gap: 0.875rem;
+  padding: 1rem;
+  border-radius: var(--melodify-radius-lg, 12px);
+  border: 1px solid var(--melodify-border, #e5e7eb);
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition: border-color 0.15s ease;
 }
 
 .explore-card:hover {
-  box-shadow: 0 14px 40px rgba(15, 23, 42, 0.1);
-  border-color: rgba(99, 102, 241, 0.22);
-  transform: translateY(-2px);
+  border-color: #d1d5db;
 }
 
 .explore-card__cover {
-  width: 4.75rem;
-  height: 4.75rem;
-  border-radius: 1.05rem;
+  width: 4rem;
+  height: 4rem;
+  border-radius: 8px;
   display: grid;
   place-items: center;
-  background: linear-gradient(145deg, #f5f3ff, #eef2ff);
-  color: #6d5dfc;
-  font-weight: 900;
-  border: 1px solid rgba(99, 102, 241, 0.12);
+  background: #f3f4f6;
+  color: #374151;
+  font-weight: 600;
+  font-size: 0.95rem;
 }
 
 .explore-card__abbr {
-  font-size: 1.05rem;
   letter-spacing: -0.02em;
 }
 
 .explore-card__body h2 {
   margin: 0;
-  font-size: 1.02rem;
-  font-weight: 900;
+  font-size: 0.9375rem;
+  font-weight: 600;
   color: var(--melodify-strong);
-  line-height: 1.25;
+  line-height: 1.3;
 }
 
 .explore-card__prompt {
-  margin: 0.4rem 0;
+  margin: 0.35rem 0 0;
   color: var(--melodify-muted);
-  font-size: 0.84rem;
+  font-size: 0.8125rem;
   line-height: 1.5;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -318,11 +307,11 @@ onMounted(() => void fetchList())
 .explore-card__meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.65rem;
+  gap: 0.75rem;
   align-items: center;
   color: var(--melodify-muted);
-  font-size: 0.8rem;
-  margin-bottom: 0.55rem;
+  font-size: 0.75rem;
+  margin: 0.5rem 0 0;
 }
 
 .meta-likes {
@@ -332,27 +321,27 @@ onMounted(() => void fetchList())
 }
 
 .like-dot {
-  width: 0.45rem;
-  height: 0.45rem;
+  width: 0.35rem;
+  height: 0.35rem;
   border-radius: 999px;
-  background: rgba(148, 163, 184, 0.75);
+  background: #d1d5db;
 }
 
 .like-dot--on {
-  background: linear-gradient(135deg, #f59e0b, #f97316);
-  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.2);
+  background: var(--el-color-primary);
 }
 
 .explore-card__actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.45rem;
+  gap: 0.25rem 0.75rem;
   align-items: center;
+  margin-top: 0.65rem;
 }
 
 .like-login-hint {
-  font-size: 0.8rem;
-  font-weight: 800;
+  font-size: 0.8125rem;
+  font-weight: 500;
   color: var(--el-color-primary);
   text-decoration: none;
 }
@@ -370,7 +359,7 @@ onMounted(() => void fetchList())
 
 .explore-empty-cta {
   display: inline-block;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--el-color-primary);
   text-decoration: none;
 }
@@ -382,26 +371,23 @@ onMounted(() => void fetchList())
 .pager-wrap {
   display: flex;
   justify-content: flex-end;
-  margin-top: 1rem;
+  margin-top: 1.25rem;
 }
 
 .explore-toolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.65rem;
+  gap: 0.5rem;
   align-items: center;
 }
 
 .explore-search {
-  flex: 1 1 220px;
-  min-width: min(100%, 240px);
+  flex: 1 1 200px;
+  min-width: min(100%, 220px);
 }
 
-.explore-sort {
-  width: 150px;
-}
-
+.explore-sort,
 .explore-pagesize {
-  width: 128px;
+  width: 132px;
 }
 </style>

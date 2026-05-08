@@ -110,8 +110,7 @@ void auth.refreshMe().catch(() => {})
 <template>
   <div class="page-stack profile-page">
     <div class="profile-shell">
-      <aside class="profile-aside melodify-glass-card">
-        <div class="aside-gradient" aria-hidden="true" />
+      <aside class="profile-aside soft-card">
         <div class="aside-inner">
           <div
             class="aside-avatar"
@@ -146,7 +145,7 @@ void auth.refreshMe().catch(() => {})
             </RouterLink>
           </div>
 
-          <p class="aside-tip">资料与流水在右侧管理；生成完成会通过站内通知提醒您。</p>
+          <p class="aside-tip">右侧可编辑资料与查看积分流水。</p>
         </div>
       </aside>
 
@@ -180,9 +179,7 @@ void auth.refreshMe().catch(() => {})
                   <el-input v-model="profileForm.phone" placeholder="选填" maxlength="20" clearable />
                 </el-form-item>
                 <div class="full-span form-actions">
-                  <el-button type="primary" round size="large" :loading="savingProfile" @click="saveProfile">
-                    保存资料
-                  </el-button>
+                  <el-button type="primary" :loading="savingProfile" @click="saveProfile">保存资料</el-button>
                 </div>
               </el-form>
             </div>
@@ -229,168 +226,148 @@ void auth.refreshMe().catch(() => {})
 <style scoped>
 .profile-shell {
   display: grid;
-  grid-template-columns: minmax(0, 17.5rem) minmax(0, 1fr);
-  gap: 1.35rem;
+  grid-template-columns: minmax(0, 15.5rem) minmax(0, 1fr);
+  gap: 1.25rem;
   align-items: start;
 }
 
 .profile-aside {
-  position: relative;
+  border-radius: var(--melodify-radius-lg, 12px);
   overflow: hidden;
-  border-radius: 1.35rem;
-  padding: 0;
-}
-
-.aside-gradient {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(120% 90% at 10% -10%, rgba(109, 93, 252, 0.35), transparent 52%),
-    radial-gradient(80% 60% at 100% 0%, rgba(14, 165, 233, 0.18), transparent 45%);
-  pointer-events: none;
 }
 
 .aside-inner {
-  position: relative;
-  padding: 1.65rem 1.35rem 1.45rem;
+  padding: 1.5rem 1.25rem;
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 0.85rem;
+  gap: 1rem;
 }
 
 .aside-avatar {
   margin: 0 auto;
-  width: 5.5rem;
-  height: 5.5rem;
-  border-radius: 1.65rem;
-  background: linear-gradient(145deg, #6366f1, #8b5cf6);
-  color: #fff;
+  width: 4.5rem;
+  height: 4.5rem;
+  border-radius: 50%;
+  background: #e5e7eb;
+  color: #4b5563;
   display: grid;
   place-items: center;
-  font-weight: 900;
-  font-size: 1.85rem;
+  font-weight: 600;
+  font-size: 1.25rem;
   background-size: cover;
   background-position: center;
-  box-shadow:
-    0 12px 32px rgba(99, 102, 241, 0.25),
-    0 0 0 4px rgba(255, 255, 255, 0.75);
 }
 
 .aside-name {
   margin: 0;
-  font-size: 1.35rem;
-  font-weight: 900;
+  font-size: 1.125rem;
+  font-weight: 600;
   text-align: center;
   color: var(--melodify-strong);
-  letter-spacing: -0.03em;
+  letter-spacing: -0.02em;
 }
 
 .aside-username {
-  margin: -0.35rem 0 0;
-  font-size: 0.82rem;
+  margin: -0.5rem 0 0;
+  font-size: 0.8125rem;
   text-align: center;
   color: var(--melodify-muted);
 }
 
 .aside-stat {
-  margin-top: 0.35rem;
-  padding: 0.95rem 1rem;
-  border-radius: 1.15rem;
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid rgba(99, 102, 241, 0.15);
+  padding-top: 1rem;
+  border-top: 1px solid var(--melodify-border, #e5e7eb);
 }
 
 .aside-stat-label {
   display: block;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   color: var(--melodify-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
 }
 
 .aside-stat-num {
   display: block;
-  margin-top: 0.15rem;
-  font-size: 1.85rem;
-  font-weight: 900;
-  color: #4f46e5;
-  letter-spacing: -0.04em;
+  margin-top: 0.2rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--melodify-strong);
+  letter-spacing: -0.02em;
 }
 
 .aside-actions {
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
+  gap: 0.15rem;
 }
 
 .aside-link {
   display: flex;
   align-items: center;
-  gap: 0.55rem;
-  padding: 0.65rem 0.85rem;
-  border-radius: 0.95rem;
-  font-weight: 700;
-  font-size: 0.9rem;
+  gap: 0.5rem;
+  padding: 0.5rem 0.35rem;
+  border-radius: 6px;
+  font-weight: 500;
+  font-size: 0.875rem;
   color: var(--melodify-strong);
   text-decoration: none;
-  border: 1px solid rgba(148, 163, 184, 0.25);
-  background: rgba(248, 250, 252, 0.85);
-  transition:
-    background 0.18s ease,
-    border-color 0.18s ease,
-    color 0.18s ease;
+  transition: background 0.12s ease;
 }
 
 .aside-link:hover {
-  border-color: rgba(99, 102, 241, 0.35);
-  background: rgba(99, 102, 241, 0.07);
-  color: #4f46e5;
+  background: #f3f4f6;
+  color: var(--el-color-primary);
 }
 
 .aside-tip {
-  margin: 0.25rem 0 0;
+  margin: 0;
   font-size: 0.75rem;
-  line-height: 1.45;
+  line-height: 1.5;
   color: var(--melodify-muted);
   text-align: center;
 }
 
 .profile-main {
-  border-radius: 1.35rem;
-  padding: 0.25rem 0 0.5rem;
-  min-height: 22rem;
+  border-radius: var(--melodify-radius-lg, 12px);
+  min-height: 20rem;
 }
 
 .profile-tabs {
-  --el-tabs-header-height: 48px;
+  --el-tabs-header-height: 44px;
 }
 
 .profile-tabs :deep(.el-tabs__header) {
-  margin: 0 1rem;
-  padding-top: 0.35rem;
+  margin: 0;
+  padding: 0 1.25rem;
 }
 
 .profile-tabs :deep(.el-tabs__nav-wrap::after) {
   height: 1px;
-  background-color: rgba(148, 163, 184, 0.22);
+  background-color: var(--melodify-border, #e5e7eb);
 }
 
 .profile-tabs :deep(.el-tabs__item) {
-  font-weight: 800;
-  font-size: 0.95rem;
+  font-weight: 500;
+  font-size: 0.9375rem;
+  color: var(--melodify-muted);
 }
 
 .profile-tabs :deep(.el-tabs__item.is-active) {
-  color: #4f46e5;
+  color: var(--melodify-strong);
+  font-weight: 600;
+}
+
+.profile-tabs :deep(.el-tabs__active-bar) {
+  background-color: var(--el-color-primary);
 }
 
 .pane-body {
-  padding: 1rem 1.35rem 1.5rem;
+  padding: 1.25rem;
 }
 
 .pane-lead {
-  margin: 0 0 1.1rem;
-  font-size: 0.88rem;
+  margin: 0 0 1rem;
+  font-size: 0.875rem;
   color: var(--melodify-muted);
   line-height: 1.55;
 }
@@ -398,7 +375,7 @@ void auth.refreshMe().catch(() => {})
 .profile-form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.25rem 1.15rem;
+  gap: 0.125rem 1rem;
 }
 
 .full-span {
@@ -406,13 +383,15 @@ void auth.refreshMe().catch(() => {})
 }
 
 .form-actions {
-  margin-top: 0.35rem;
+  margin-top: 0.5rem;
 }
 
 .log-table {
   width: 100%;
-  border-radius: 0.85rem;
-  overflow: hidden;
+}
+
+.log-table :deep(.el-table__inner-wrapper::before) {
+  display: none;
 }
 
 .pager {

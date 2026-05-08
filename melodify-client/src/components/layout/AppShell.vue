@@ -128,15 +128,15 @@ const onLogout = () => {
 }
 
 .brand-mark {
-  width: 2.65rem;
-  height: 2.65rem;
+  width: 2.25rem;
+  height: 2.25rem;
   display: grid;
   place-items: center;
-  border-radius: 1rem;
+  border-radius: 8px;
   color: #fff;
-  font-weight: 800;
-  background: #6d5dfc;
-  box-shadow: 0 8px 18px rgba(99, 102, 241, 0.16);
+  font-weight: 700;
+  font-size: 0.95rem;
+  background: #5b52f2;
 }
 
 .brand-name,
@@ -147,50 +147,60 @@ const onLogout = () => {
 }
 
 .brand-name {
-  font-size: 1.08rem;
-  font-weight: 800;
-  letter-spacing: -0.03em;
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
 .brand-subtitle {
-  margin-top: -0.12rem;
-  font-size: 0.72rem;
+  margin-top: -0.06rem;
+  font-size: 0.6875rem;
   color: var(--melodify-muted);
-  letter-spacing: 0.08em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
+  font-weight: 500;
 }
 
 .app-nav {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.3rem;
-  padding: 0.3rem;
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  border-radius: 999px;
-  background: #f8fafc;
+  gap: 0.15rem 0.25rem;
 }
 
 .nav-link {
-  font-size: 0.9375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
   color: var(--melodify-muted);
-  padding: 0.48rem 0.9rem;
-  border-radius: 999px;
+  padding: 0.35rem 0.65rem;
+  border-radius: 6px;
   transition:
-    color 0.18s ease,
-    background-color 0.18s ease;
+    color 0.12s ease,
+    background 0.12s ease;
 }
 
 .nav-link:hover {
   color: var(--melodify-strong);
-  background: rgba(99, 102, 241, 0.08);
+  background: #f3f4f6;
 }
 
 .nav-link.router-link-active {
-  color: #fff;
-  font-weight: 700;
-  background: #6d5dfc;
-  box-shadow: 0 8px 16px rgba(99, 102, 241, 0.14);
+  color: var(--melodify-strong);
+  font-weight: 600;
+  background: transparent;
+  box-shadow: none;
+  position: relative;
+}
+
+.nav-link.router-link-active::after {
+  content: '';
+  position: absolute;
+  left: 0.65rem;
+  right: 0.65rem;
+  bottom: 0.1rem;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--el-color-primary);
 }
 
 .header-actions {
@@ -202,70 +212,73 @@ const onLogout = () => {
 .ghost-action,
 .primary-action,
 .user-pill {
-  border-radius: 999px;
-  font-size: 0.9375rem;
-  font-weight: 700;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
 }
 
 .ghost-action {
-  color: var(--el-color-primary);
-  padding: 0.55rem 0.95rem;
+  color: var(--melodify-strong);
+  padding: 0.45rem 0.65rem;
 }
 
 .ghost-action.router-link-active {
   color: var(--melodify-strong);
-  background: rgba(99, 102, 241, 0.12);
-  border-radius: 999px;
+  background: #f3f4f6;
+  border-radius: 8px;
 }
 
 .primary-action {
   color: #fff;
-  padding: 0.62rem 1rem;
-  background: #6d5dfc;
-  box-shadow: 0 8px 18px rgba(99, 102, 241, 0.14);
+  padding: 0.45rem 0.85rem;
+  background: #5b52f2;
+  box-shadow: none;
 }
 
 .primary-action.router-link-active {
-  box-shadow: 0 10px 26px rgba(99, 102, 241, 0.24);
+  box-shadow: none;
 }
 
 .user-pill {
   display: inline-flex;
   align-items: center;
-  gap: 0.7rem;
-  border: 1px solid rgba(148, 163, 184, 0.2);
+  gap: 0.6rem;
+  border: 1px solid var(--melodify-border, #e5e7eb);
   background: #ffffff;
   color: var(--melodify-strong);
-  padding: 0.35rem 0.85rem 0.35rem 0.35rem;
+  padding: 0.3rem 0.65rem 0.3rem 0.35rem;
   cursor: pointer;
   font-family: inherit;
-  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.04);
+  box-shadow: none;
 }
 
 .avatar {
   background-size: cover;
   background-position: center;
-  background-color: #6366f1;
-  color: #fff;
-  font-weight: 800;
+  background-color: #d1d5db;
+  color: #374151;
+  font-weight: 600;
 }
 
 .avatar {
-  width: 2.2rem;
-  height: 2.2rem;
+  width: 2rem;
+  height: 2rem;
   display: grid;
   place-items: center;
-  border-radius: 999px;
+  border-radius: 50%;
+  font-size: 0.75rem;
 }
 
 .user-name {
   text-align: left;
   line-height: 1.15;
+  font-weight: 500;
+  font-size: 0.875rem;
 }
 
 .user-points {
-  margin-top: 0.1rem;
-  font-size: 0.75rem;
+  margin-top: 0.08rem;
+  font-size: 0.6875rem;
   color: var(--melodify-muted);
   text-align: left;
 }
