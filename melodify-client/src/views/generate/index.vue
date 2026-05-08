@@ -363,17 +363,19 @@ const onSubmit = async () => {
               />
             </el-form-item>
             <el-form-item label="精确歌词" prop="lyrics">
-              <p class="lyric-skeleton-hint">可选用下方骨架，再替换为你的词。</p>
-              <div class="lyric-skeleton-row">
-                <button
-                  v-for="sk in LYRIC_SKELETONS"
-                  :key="sk.id"
-                  type="button"
-                  class="lyric-skeleton-chip"
-                  @click="applyLyricSkeleton(sk.text)"
-                >
-                  {{ sk.label }}
-                </button>
+              <div class="lyric-toolbar">
+                <p class="lyric-toolbar__hint">可选用骨架起步，再改成你的词</p>
+                <div class="lyric-toolbar__chips">
+                  <button
+                    v-for="sk in LYRIC_SKELETONS"
+                    :key="sk.id"
+                    type="button"
+                    class="lyric-skel-btn"
+                    @click="applyLyricSkeleton(sk.text)"
+                  >
+                    {{ sk.label }}
+                  </button>
+                </div>
               </div>
               <el-input
                 v-model="form.lyrics"
@@ -387,8 +389,12 @@ const onSubmit = async () => {
             </el-form-item>
           </template>
 
-          <div v-if="form.customMode" class="custom-box">
-            <div class="form-row">
+          <div v-if="form.customMode" class="custom-panel">
+            <div class="custom-panel__head">
+              <span class="custom-panel__head-title">自定义参数</span>
+              <span class="custom-panel__head-hint">标题与风格为必填；下方快选可一键填入</span>
+            </div>
+            <div class="form-row custom-panel__fields">
               <el-form-item label="风格">
                 <el-input v-model="form.style" placeholder="如：爵士、民谣、电子" maxlength="1000" />
               </el-form-item>
@@ -396,74 +402,109 @@ const onSubmit = async () => {
                 <el-input v-model="form.title" placeholder="成品标题" maxlength="100" />
               </el-form-item>
             </div>
-            <el-checkbox v-model="form.instrumental">纯器乐（无人声）</el-checkbox>
+            <el-checkbox v-model="form.instrumental" class="custom-panel__instrumental"
+              >纯器乐（无人声）</el-checkbox
+            >
 
             <div class="custom-presets-block">
-              <p class="preset-block-title">风格快选（填入「风格」，可再手改）</p>
-              <div class="prompt-chips prompt-chips--tight">
-                <button
-                  v-for="(s, i) in STYLE_QUICK_PRESETS"
-                  :key="`st-${i}`"
-                  type="button"
-                  class="prompt-chip prompt-chip--compact"
-                  :title="s"
-                  @click="applyStyleQuick(s)"
-                >
-                  {{ s.length > 42 ? `${s.slice(0, 40)}…` : s }}
-                </button>
+              <div class="preset-subsection">
+                <span class="preset-subsection__label">风格快选</span>
+                <div class="style-preset-grid">
+                  <button
+                    v-for="(s, i) in STYLE_QUICK_PRESETS"
+                    :key="`st-${i}`"
+                    type="button"
+                    class="style-preset-tile"
+                    :title="s"
+                    @click="applyStyleQuick(s)"
+                  >
+                    <span class="style-preset-tile__text">{{
+                      s.length > 56 ? `${s.slice(0, 54)}…` : s
+                    }}</span>
+                  </button>
+                </div>
               </div>
-              <p class="preset-block-title">标题灵感</p>
-              <div class="prompt-chips prompt-chips--tight">
-                <button
-                  v-for="t in TITLE_IDEA_PRESETS"
-                  :key="t"
-                  type="button"
-                  class="dim-chip dim-chip--title"
-                  @click="applyTitleIdea(t)"
-                >
-                  {{ t }}
-                </button>
+              <div class="preset-subsection">
+                <span class="preset-subsection__label">标题灵感</span>
+                <div class="title-idea-row">
+                  <button
+                    v-for="t in TITLE_IDEA_PRESETS"
+                    :key="t"
+                    type="button"
+                    class="title-idea-chip"
+                    @click="applyTitleIdea(t)"
+                  >
+                    {{ t }}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
 
-          <el-collapse v-model="presetCollapse" class="inspire-collapse">
-            <el-collapse-item title="灵感预设库（规则 + 标签 / 整段）" name="inspire">
-              <ul class="preset-rule-list">
-                <li v-for="(line, idx) in PROMPT_COMPOSITION_RULES" :key="idx">{{ line }}</li>
-              </ul>
+          <div class="inspire-panel">
+            <el-collapse v-model="presetCollapse" class="inspire-collapse">
+              <el-collapse-item name="inspire">
+                <template #title>
+                  <div class="inspire-collapse__head">
+                    <div class="inspire-collapse__row">
+                      <span class="inspire-collapse__title">灵感预设库</span>
+                      <span class="inspire-collapse__badge">本地</span>
+                    </div>
+                    <span class="inspire-collapse__sub">撰写规则 · 整段替换 · 标签追加</span>
+                  </div>
+                </template>
 
-              <p class="preset-block-title">整段示例（替换当前创作描述）</p>
-              <div class="prompt-chips prompt-chips--full">
-                <button
-                  v-for="item in FULL_PROMPT_PRESETS"
-                  :key="item.id"
-                  type="button"
-                  class="prompt-chip prompt-chip--named"
-                  :title="item.text"
-                  @click="applyFullPresetText(item.text)"
-                >
-                  {{ item.label }}
-                </button>
-              </div>
+                <div class="preset-body">
+                  <section class="preset-section preset-section--rules">
+                    <h3 class="preset-section__h">撰写要点</h3>
+                    <ul class="preset-rule-cards">
+                      <li v-for="(line, idx) in PROMPT_COMPOSITION_RULES" :key="idx" class="preset-rule-card">
+                        <span class="preset-rule-card__idx">{{ idx + 1 }}</span>
+                        <span class="preset-rule-card__text">{{ line }}</span>
+                      </li>
+                    </ul>
+                  </section>
 
-              <p class="preset-block-title">按标签拼装（追加到上方创作描述 / 氛围描述）</p>
-              <div v-for="dim in PROMPT_DIMENSIONS" :key="dim.id" class="dim-block">
-                <span class="dim-block__title">{{ dim.title }}</span>
-                <div class="dim-block__tags">
-                  <button
-                    v-for="tag in dim.tags"
-                    :key="`${dim.id}-${tag}`"
-                    type="button"
-                    class="dim-chip"
-                    @click="appendDimensionTag(tag)"
-                  >
-                    {{ tag }}
-                  </button>
+                  <section class="preset-section">
+                    <h3 class="preset-section__h">整段示例</h3>
+                    <p class="preset-section__hint">点击即用完整描述替换当前「创作描述 / 器乐氛围」</p>
+                    <div class="full-preset-grid">
+                      <button
+                        v-for="item in FULL_PROMPT_PRESETS"
+                        :key="item.id"
+                        type="button"
+                        class="full-preset-card"
+                        :title="item.text"
+                        @click="applyFullPresetText(item.text)"
+                      >
+                        <span class="full-preset-card__name">{{ item.label }}</span>
+                        <span class="full-preset-card__peek">{{ item.text }}</span>
+                      </button>
+                    </div>
+                  </section>
+
+                  <section class="preset-section preset-section--tags">
+                    <h3 class="preset-section__h">按维度追加</h3>
+                    <p class="preset-section__hint">依次点击，片段会追加到上方描述（自动加逗号）</p>
+                    <div v-for="dim in PROMPT_DIMENSIONS" :key="dim.id" class="dim-row">
+                      <span class="dim-row__label">{{ dim.title }}</span>
+                      <div class="dim-row__tags">
+                        <button
+                          v-for="tag in dim.tags"
+                          :key="`${dim.id}-${tag}`"
+                          type="button"
+                          class="tag-pill"
+                          @click="appendDimensionTag(tag)"
+                        >
+                          {{ tag }}
+                        </button>
+                      </div>
+                    </div>
+                  </section>
                 </div>
-              </div>
-            </el-collapse-item>
-          </el-collapse>
+              </el-collapse-item>
+            </el-collapse>
+          </div>
 
           <div class="submit-row">
             <el-button type="primary" size="large" :loading="submitting" @click="onSubmit">
@@ -555,184 +596,417 @@ const onSubmit = async () => {
   font-size: 0.82rem;
 }
 
-.prompt-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.6rem;
-  margin: -0.3rem 0 1.2rem;
+/* —— 自定义参数块 —— */
+.custom-panel {
+  margin-bottom: 1.25rem;
+  padding: 1.15rem 1.2rem 1.2rem;
+  border-radius: var(--melodify-radius-lg);
+  border: 1px solid var(--melodify-divider-strong);
+  background: linear-gradient(165deg, var(--el-color-primary-light-9) 0%, var(--melodify-card-solid) 42%);
+  box-shadow: var(--melodify-shadow-soft);
 }
 
-.prompt-chip {
-  border: 1px solid rgba(var(--melodify-primary-rgb), 0.14);
-  border-radius: 999px;
-  background: var(--melodify-surface-sunken, #f3efe6);
-  color: var(--el-color-primary);
-  padding: 0.45rem 0.75rem;
-  cursor: pointer;
-  font-size: 0.85rem;
-  font-family: inherit;
-  font-weight: 600;
-  transition:
-    background 0.15s ease,
-    border-color 0.15s ease,
-    transform 0.12s ease;
+.custom-panel__head {
+  margin-bottom: 1rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid var(--melodify-divider);
 }
 
-.prompt-chip:hover {
-  background: var(--el-color-primary-light-9);
-  border-color: rgba(var(--melodify-primary-rgb), 0.28);
-}
-
-.prompt-chip:active {
-  transform: scale(0.98);
-}
-
-.prompt-chip:focus-visible {
-  outline: 2px solid var(--el-color-primary);
-  outline-offset: 2px;
-}
-
-.inspire-collapse {
-  margin: 0.5rem 0 1rem;
-  border: 1px solid rgba(100, 92, 85, 0.14);
-  border-radius: var(--melodify-radius-lg, 1rem);
-  overflow: hidden;
-  background: rgba(255, 255, 255, 0.35);
-}
-
-.preset-rule-list {
-  margin: 0 0 1rem;
-  padding-left: 1.2rem;
-  color: var(--melodify-muted);
-  font-size: 0.84rem;
-  line-height: 1.5;
-}
-
-.preset-rule-list li + li {
-  margin-top: 0.35rem;
-}
-
-.preset-block-title {
-  margin: 0.85rem 0 0.45rem;
-  font-size: 0.8rem;
+.custom-panel__head-title {
+  display: block;
+  font-size: 0.92rem;
   font-weight: 700;
   color: var(--melodify-strong);
+  letter-spacing: 0.02em;
 }
 
-.preset-block-title:first-of-type {
-  margin-top: 0;
+.custom-panel__head-hint {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 0.78rem;
+  color: var(--melodify-muted);
+  line-height: 1.45;
 }
 
-.prompt-chips--full {
-  margin: 0 0 0.35rem;
+.custom-panel__fields {
+  margin-bottom: 0.25rem;
 }
 
-.prompt-chips--tight {
-  margin: 0 0 0.5rem;
+.custom-panel__instrumental {
+  margin: 0.35rem 0 0;
+  font-weight: 600;
+}
+
+.custom-presets-block {
+  margin-top: 1.1rem;
+  padding-top: 1.05rem;
+  border-top: 1px solid var(--melodify-divider);
+}
+
+.preset-subsection + .preset-subsection {
+  margin-top: 1rem;
+}
+
+.preset-subsection__label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--melodify-muted);
+  margin-bottom: 0.55rem;
+}
+
+.style-preset-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
+  gap: 0.5rem;
+}
+
+.style-preset-tile {
+  display: flex;
+  align-items: flex-start;
+  text-align: left;
+  min-height: 3.1rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: var(--melodify-radius-sm);
+  border: 1px solid var(--melodify-divider-strong);
+  background: var(--melodify-card-solid);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: var(--melodify-strong);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background 0.15s ease;
+}
+
+.style-preset-tile:hover {
+  border-color: rgba(var(--melodify-primary-rgb), 0.28);
+  box-shadow: var(--melodify-shadow-card);
+  background: var(--melodify-surface-sunken);
+}
+
+.style-preset-tile:focus-visible {
+  outline: 2px solid var(--el-color-primary-light-5);
+  outline-offset: 1px;
+}
+
+.style-preset-tile__text {
+  display: -webkit-box;
+  line-clamp: 3;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.title-idea-row {
+  display: flex;
+  flex-wrap: wrap;
   gap: 0.45rem;
 }
 
-.prompt-chip--named {
-  font-size: 0.8rem;
-  max-width: 100%;
-}
-
-.prompt-chip--compact {
-  font-size: 0.72rem;
-  font-weight: 500;
-  text-align: left;
-  line-height: 1.3;
-  border-radius: var(--melodify-radius-md, 0.65rem);
-  padding: 0.38rem 0.55rem;
-  white-space: normal;
-}
-
-.dim-block {
-  margin-bottom: 0.65rem;
-}
-
-.dim-block:last-child {
-  margin-bottom: 0;
-}
-
-.dim-block__title {
-  display: block;
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: var(--melodify-muted);
-  margin-bottom: 0.4rem;
-}
-
-.dim-block__tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-}
-
-.dim-chip {
-  border: 1px solid var(--melodify-divider-strong, rgba(58, 48, 40, 0.15));
+.title-idea-chip {
+  padding: 0.4rem 0.75rem;
   border-radius: 999px;
-  background: var(--melodify-surface-sunken, #f3efe6);
-  color: var(--melodify-strong);
-  padding: 0.28rem 0.55rem;
-  cursor: pointer;
-  font-size: 0.78rem;
+  border: 1px solid rgba(var(--melodify-primary-rgb), 0.2);
+  background: var(--melodify-card-solid);
+  color: var(--el-color-primary);
+  font-size: 0.82rem;
+  font-weight: 600;
   font-family: inherit;
+  cursor: pointer;
   transition:
     background 0.15s ease,
     border-color 0.15s ease;
 }
 
-.dim-chip:hover {
-  border-color: rgba(var(--melodify-primary-rgb), 0.25);
+.title-idea-chip:hover {
   background: var(--el-color-primary-light-9);
+  border-color: rgba(var(--melodify-primary-rgb), 0.35);
 }
 
-.dim-chip--title {
-  font-weight: 600;
-  color: var(--el-color-primary);
+/* —— 歌词骨架工具条 —— */
+.lyric-toolbar {
+  margin-bottom: 0.65rem;
 }
 
-.lyric-skeleton-hint {
-  margin: 0 0 0.4rem;
+.lyric-toolbar__hint {
+  margin: 0 0 0.45rem;
   font-size: 0.8rem;
   color: var(--melodify-muted);
 }
 
-.lyric-skeleton-row {
+.lyric-toolbar__chips {
   display: flex;
   flex-wrap: wrap;
   gap: 0.45rem;
-  margin-bottom: 0.65rem;
 }
 
-.lyric-skeleton-chip {
+.lyric-skel-btn {
+  padding: 0.38rem 0.7rem;
+  border-radius: var(--melodify-radius-sm);
   border: 1px dashed rgba(var(--melodify-primary-rgb), 0.35);
-  border-radius: 999px;
-  background: rgba(var(--melodify-primary-rgb), 0.06);
+  background: rgba(var(--melodify-primary-rgb), 0.05);
   color: var(--el-color-primary);
-  padding: 0.32rem 0.65rem;
-  cursor: pointer;
-  font-size: 0.8rem;
-  font-family: inherit;
+  font-size: 0.78rem;
   font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s ease;
 }
 
-.lyric-skeleton-chip:hover {
+.lyric-skel-btn:hover {
   background: var(--el-color-primary-light-9);
+  border-style: solid;
 }
 
-.custom-presets-block {
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px dashed rgba(100, 92, 85, 0.18);
+/* —— 灵感预设折叠面板 —— */
+.inspire-panel {
+  margin-bottom: 1rem;
 }
 
-.custom-box {
-  padding: 1rem;
-  border-radius: var(--melodify-radius-lg, 1rem);
-  background: #faf8f5;
-  border: 1px solid rgba(100, 92, 85, 0.14);
+.inspire-collapse {
+  border: 1px solid var(--melodify-divider-strong);
+  border-radius: var(--melodify-radius-lg);
+  overflow: hidden;
+  background: var(--melodify-card-solid);
+  box-shadow: var(--melodify-shadow-card);
+}
+
+.inspire-collapse :deep(.el-collapse-item__header) {
+  height: auto;
+  min-height: 3.35rem;
+  padding: 0.85rem 1rem;
+  line-height: 1.35;
+  font-weight: 600;
+  background: linear-gradient(180deg, #fafafa 0%, var(--melodify-card-solid) 100%);
+  border-bottom: 1px solid var(--melodify-divider);
+}
+
+.inspire-collapse :deep(.el-collapse-item__wrap) {
+  border-bottom: none;
+  background: var(--melodify-card-solid);
+}
+
+.inspire-collapse :deep(.el-collapse-item__content) {
+  padding: 0;
+}
+
+.inspire-collapse :deep(.el-collapse-item__arrow) {
+  margin-left: 0.75rem;
+  color: var(--melodify-muted);
+}
+
+.inspire-collapse__head {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  text-align: left;
+}
+
+.inspire-collapse__row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.inspire-collapse__title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--melodify-strong);
+}
+
+.inspire-collapse__badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  background: var(--el-color-primary-light-9);
+  color: var(--el-color-primary);
+  border: 1px solid rgba(var(--melodify-primary-rgb), 0.15);
+}
+
+.inspire-collapse__sub {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--melodify-muted);
+}
+
+.preset-body {
+  padding: 1rem 1.05rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.35rem;
+}
+
+.preset-section__h {
+  margin: 0 0 0.45rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--melodify-strong);
+  letter-spacing: 0.02em;
+}
+
+.preset-section__hint {
+  margin: 0 0 0.75rem;
+  font-size: 0.76rem;
+  color: var(--melodify-muted);
+  line-height: 1.45;
+}
+
+.preset-rule-cards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.preset-rule-card {
+  display: flex;
+  gap: 0.65rem;
+  align-items: flex-start;
+  padding: 0.6rem 0.7rem;
+  border-radius: var(--melodify-radius-sm);
+  border: 1px solid var(--melodify-divider);
+  background: var(--melodify-surface-muted);
+}
+
+.preset-rule-card__idx {
+  flex: none;
+  width: 1.35rem;
+  height: 1.35rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: var(--el-color-primary-light-9);
+  color: var(--el-color-primary);
+}
+
+.preset-rule-card__text {
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--melodify-strong);
+}
+
+.full-preset-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 160px), 1fr));
+  gap: 0.55rem;
+}
+
+.full-preset-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+  padding: 0.65rem 0.75rem;
+  min-height: 5rem;
+  text-align: left;
+  border-radius: var(--melodify-radius-sm);
+  border: 1px solid var(--melodify-divider-strong);
+  background: var(--melodify-card-solid);
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.12s ease;
+}
+
+.full-preset-card:hover {
+  border-color: rgba(var(--melodify-primary-rgb), 0.3);
+  box-shadow: var(--melodify-shadow-hover);
+  transform: translateY(-1px);
+}
+
+.full-preset-card:focus-visible {
+  outline: 2px solid var(--el-color-primary-light-5);
+  outline-offset: 2px;
+}
+
+.full-preset-card__name {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--melodify-strong);
+  line-height: 1.3;
+}
+
+.full-preset-card__peek {
+  font-size: 0.68rem;
+  line-height: 1.4;
+  color: var(--melodify-muted);
+  display: -webkit-box;
+  line-clamp: 2;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.preset-section--tags {
+  padding-top: 0.25rem;
+}
+
+.dim-row {
+  padding: 0.65rem 0 0.75rem;
+  border-bottom: 1px solid var(--melodify-divider);
+}
+
+.dim-row:first-of-type {
+  padding-top: 0;
+}
+
+.dim-row:last-of-type {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.dim-row__label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--melodify-muted);
+  margin-bottom: 0.45rem;
+}
+
+.dim-row__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.38rem;
+}
+
+.tag-pill {
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--melodify-divider-strong);
+  background: var(--melodify-surface-sunken);
+  color: var(--melodify-strong);
+  font-size: 0.76rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition:
+    background 0.12s ease,
+    border-color 0.12s ease;
+}
+
+.tag-pill:hover {
+  border-color: rgba(var(--melodify-primary-rgb), 0.28);
+  background: var(--el-color-primary-light-9);
+  color: var(--el-color-primary);
+}
+
+.tag-pill:focus-visible {
+  outline: 2px solid var(--el-color-primary-light-5);
+  outline-offset: 1px;
 }
 
 .submit-row {
