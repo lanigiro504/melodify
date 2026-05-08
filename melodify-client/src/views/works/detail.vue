@@ -243,7 +243,7 @@ onMounted(() => void fetchDetail())
           />
         </div>
         <p class="player-hint">
-          点击封面试听；进度由底部播放条控制，若有歌词将同步高亮。成片以 URL 存库（可能为 Suno 外链或已镜像到本服务
+          点击封面试听；进度由底部播放条控制。若有逐行歌词，见本页下方「歌词」区块。成片以 URL 存库（可能为 Suno 外链或已镜像到本服务
           <code>/api/media/audio/</code>）。若下载因跨域失败，浏览器会新开标签页，可在该页另存为。
         </p>
       </div>

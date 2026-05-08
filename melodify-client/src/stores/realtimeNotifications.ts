@@ -39,6 +39,19 @@ export const useRealtimeNotificationStore = defineStore('realtimeNotifications',
 
   const unreadCount = computed(() => items.value.filter((x) => !x.read).length)
 
+  function formatNotifyMessage(p: GenerationFinishedPayload): string {
+    if (!p.success) {
+      const err = p.errorMessage?.trim() || '生成未成功，请稍后在作品库查看任务状态'
+      return err.length > 160 ? `${err.slice(0, 157)}…` : err
+    }
+    const name = p.titlePreview?.trim()
+    if (name) {
+      const short = name.length > 36 ? `${name.slice(0, 34)}…` : name
+      return `「${short}」已就绪，可在作品库试听`
+    }
+    return '新作品已生成，可在作品库试听'
+  }
+
   function pushInbox(parsed: GenerationFinishedPayload) {
     const id =
       `${parsed.taskBizId || 'unknown'}-${parsed.success ? 'ok' : 'fail'}-${Date.now().toString(36)}`
@@ -49,12 +62,12 @@ export const useRealtimeNotificationStore = defineStore('realtimeNotifications',
 
     ElNotification({
       title: parsed.success ? '生成完成' : '生成失败',
-      message: parsed.success
-        ? (parsed.titlePreview?.trim() || '作品已就绪，可到作品库查看') +
-          (parsed.taskBizId ? `（任务 ${parsed.taskBizId}）` : '')
-        : parsed.errorMessage?.trim() || '生成未成功',
+      message: formatNotifyMessage(parsed),
       type: parsed.success ? 'success' : 'error',
-      duration: 6500,
+      duration: parsed.success ? 4200 : 7000,
+      offset: 68,
+      showClose: true,
+      customClass: 'melodify-notification',
     })
   }
 

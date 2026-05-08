@@ -310,3 +310,37 @@ button:focus-visible {
   outline: 2px solid var(--el-color-primary-light-5);
   outline-offset: 2px;
 }
+
+/* Element Plus：轻提示与桌面通知，与 Melodify 卡片一致 */
+.el-message {
+  border-radius: var(--melodify-radius-lg);
+  border: 1px solid var(--melodify-divider-strong);
+  box-shadow: var(--melodify-shadow-hover);
+  padding: 0.65rem 1rem;
+}
+
+.el-message .el-message__content {
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.el-notification.melodify-notification {
+  border-radius: var(--melodify-radius-lg);
+  border: 1px solid var(--melodify-divider-strong);
+  box-shadow: var(--melodify-shadow-hover);
+  padding: 1rem 1.15rem;
+  max-width: min(380px, calc(100vw - 32px));
+}
+
+.el-notification.melodify-notification .el-notification__title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--melodify-strong);
+}
+
+.el-notification.melodify-notification .el-notification__content {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--melodify-muted);
+  margin-top: 0.35rem;
+}

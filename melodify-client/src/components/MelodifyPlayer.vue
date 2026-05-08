@@ -3,7 +3,6 @@ import { CaretLeft, CaretRight, Close } from '@element-plus/icons-vue'
 import { storeToRefs } from 'pinia'
 import { computed, nextTick, ref, watch } from 'vue'
 import { usePlayerStore } from '@/stores/player'
-import { splitLyricLines } from '@/utils/trackLyrics'
 
 defineOptions({ name: 'MelodifyPlayer' })
 
@@ -11,18 +10,10 @@ const player = usePlayerStore()
 const { current, resolvedSrc, paused } = storeToRefs(player)
 
 const audioRef = ref<HTMLAudioElement | null>(null)
-const lyricsScrollRef = ref<HTMLElement | null>(null)
-const lyricsExpanded = ref(false)
 const currentTime = ref(0)
 const mediaDuration = ref(0)
 const lastResolvedUrl = ref('')
 const loadedSrc = ref('')
-
-const lyricLines = computed(() => {
-  const raw = current.value?.lyrics?.trim()
-  if (!raw) return []
-  return splitLyricLines(raw)
-})
 
 const fmtTime = (s: number) => {
   if (!Number.isFinite(s) || s < 0) return '0:00'
@@ -45,16 +36,6 @@ const totalDurationSec = computed(() => {
     return Number(hint)
   }
   return 0
-})
-
-const activeLineIndex = computed(() => {
-  const lines = lyricLines.value
-  const n = lines.length
-  if (!n) return -1
-  const d = totalDurationSec.value
-  if (!d || d <= 0) return 0
-  const ratio = Math.min(1, Math.max(0, currentTime.value / d))
-  return Math.min(n - 1, Math.floor(ratio * n))
 })
 
 const elapsedLabel = computed(() => fmtTime(currentTime.value))
@@ -95,10 +76,6 @@ const syncPlayback = async () => {
   }
 }
 
-watch(current, () => {
-  lyricsExpanded.value = false
-})
-
 watch(
   [current, resolvedSrc, paused],
   async () => {
@@ -120,13 +97,6 @@ watch(
   },
   { flush: 'post' },
 )
-
-watch(activeLineIndex, async (idx) => {
-  if (!lyricsExpanded.value || idx < 0 || !lyricsScrollRef.value) return
-  await nextTick()
-  const row = lyricsScrollRef.value.querySelector(`[data-line="${idx}"]`)
-  row?.scrollIntoView({ block: 'center', behavior: 'smooth' })
-})
 
 function onTimeUpdate(e: Event) {
   const a = e.target as HTMLAudioElement
@@ -178,22 +148,6 @@ function skipBy(deltaSec: number) {
         @timeupdate="onTimeUpdate"
         @loadedmetadata="onLoadedMetadata"
       />
-
-      <!-- 歌词层叠在底栏之上 -->
-      <div v-if="lyricLines.length && lyricsExpanded" class="dock-lyrics melodify-glass-card">
-        <p class="dock-lyrics__hint">歌词预览 · 无时间轴时按进度粗略同步</p>
-        <div ref="lyricsScrollRef" class="dock-lyrics__scroll">
-          <p
-            v-for="(line, i) in lyricLines"
-            :key="i"
-            :data-line="i"
-            class="dock-lyrics__line"
-            :class="{ 'dock-lyrics__line--on': i === activeLineIndex }"
-          >
-            {{ line }}
-          </p>
-        </div>
-      </div>
 
       <section class="dock-bar" aria-label="全局播放器">
         <!-- 顶部：时间与进度在同一窄带内，避免与封面行挤压 -->
@@ -252,14 +206,6 @@ function skipBy(deltaSec: number) {
           </div>
 
           <div class="dock-tools">
-            <button
-              v-if="lyricLines.length"
-              type="button"
-              class="dock-tool-text"
-              @click="lyricsExpanded = !lyricsExpanded"
-            >
-              {{ lyricsExpanded ? '收起' : '歌词' }}
-            </button>
             <button type="button" class="dock-close" aria-label="关闭播放器" @click="player.clear()">
               <el-icon><Close /></el-icon>
             </button>
@@ -281,7 +227,7 @@ function skipBy(deltaSec: number) {
   flex-direction: column;
   align-items: center;
   justify-content: flex-end;
-  gap: 0.65rem;
+  gap: 0;
   padding-bottom: max(14px, env(safe-area-inset-bottom));
   pointer-events: none;
 }
@@ -292,47 +238,6 @@ function skipBy(deltaSec: number) {
 
 .player-root audio {
   display: none;
-}
-
-/* ——歌词 */
-.dock-lyrics {
-  width: min(640px, calc(100vw - 28px));
-  padding: 0.75rem 1rem 0.95rem;
-  max-height: min(38vh, 15.5rem);
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-  border-radius: var(--melodify-radius-lg);
-  box-sizing: border-box;
-}
-
-.dock-lyrics__hint {
-  margin: 0;
-  font-size: 0.68rem;
-  color: var(--melodify-subtle);
-}
-
-.dock-lyrics__scroll {
-  overflow-y: auto;
-  margin: 0 -0.15rem;
-  padding: 0 0.15rem;
-  max-height: calc(min(38vh, 15.5rem) - 2rem);
-  scrollbar-width: thin;
-}
-
-.dock-lyrics__line {
-  margin: 0;
-  padding: 0.42rem 0.55rem;
-  border-radius: var(--melodify-radius-sm);
-  font-size: 0.86rem;
-  line-height: 1.52;
-  color: var(--melodify-muted);
-}
-
-.dock-lyrics__line--on {
-  color: var(--el-color-primary);
-  font-weight: 700;
-  background: color-mix(in srgb, var(--el-color-primary-light-9) 88%, transparent);
 }
 
 /* ——底栏（浅色 + 主色） */
@@ -583,21 +488,6 @@ function skipBy(deltaSec: number) {
   display: inline-flex;
   align-items: center;
   gap: 0.15rem;
-}
-
-.dock-tool-text {
-  padding: 0.35rem 0.55rem;
-  border-radius: 999px;
-  border: none;
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 0.78rem;
-  color: var(--el-color-primary);
-  background: transparent;
-}
-
-.dock-tool-text:hover {
-  background: var(--el-color-primary-light-9);
 }
 
 .dock-close {

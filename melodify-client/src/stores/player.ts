@@ -6,7 +6,7 @@ export interface PlayerTrack {
   title: string
   fileUrl: string
   subtitle?: string
-  /** 整段歌词（多行）；无 LRC 时由播放进度与时长按比例估算高亮行 */
+  /** 可选整段歌词（作品页等展示用） */
   lyrics?: string
   /** 曲目时长（秒），辅助在 loadedmetadata 前估算进度 */
   durationSec?: number
