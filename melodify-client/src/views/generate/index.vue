@@ -40,6 +40,17 @@ const modelOptions = [
 ]
 
 const formRef = ref<FormInstance>()
+/** 灵感库：自定义模式下默认收起，缩短页面 */
+const inspireLibraryNames = ref<string[]>(['library'])
+
+watch(
+  () => form.customMode,
+  (custom) => {
+    inspireLibraryNames.value = custom ? [] : ['library']
+  },
+  { immediate: true },
+)
+
 /** 灵感库：分页签（要点 / 整段 / 标签），避免单页折叠后过长滚动 */
 const inspirePresetTab = ref<'rules' | 'full' | 'tags'>('full')
 const submitting = ref(false)
@@ -343,7 +354,7 @@ const onSubmit = async () => {
             <el-input
               v-model="form.prompt"
               type="textarea"
-              :rows="6"
+              :rows="5"
               resize="none"
               placeholder="描述氛围、乐器与情绪（可不填）；若留空则主要依赖标题与风格。"
               :maxlength="promptMaxLen"
@@ -356,7 +367,7 @@ const onSubmit = async () => {
               <el-input
                 v-model="form.prompt"
                 type="textarea"
-                :rows="4"
+                :rows="3"
                 resize="none"
                 placeholder="补充场景、情绪或演唱提示（仅保存在任务中，不直接作为 Suno 歌词提交）。"
                 :maxlength="promptMaxLen"
@@ -381,7 +392,7 @@ const onSubmit = async () => {
               <el-input
                 v-model="form.lyrics"
                 type="textarea"
-                :rows="10"
+                :rows="7"
                 resize="none"
                 placeholder="写入可演唱的歌词（多行、结构清晰）；此栏内容将作为 Suno 人声生成的歌词。"
                 :maxlength="lyricsMaxLen"
@@ -412,16 +423,14 @@ const onSubmit = async () => {
                 <span class="preset-subsection__label">风格快选</span>
                 <div class="style-preset-grid">
                   <button
-                    v-for="(s, i) in STYLE_QUICK_PRESETS"
+                    v-for="(item, i) in STYLE_QUICK_PRESETS"
                     :key="`st-${i}`"
                     type="button"
                     class="style-preset-tile"
-                    :title="s"
-                    @click="applyStyleQuick(s)"
+                    :title="item.value"
+                    @click="applyStyleQuick(item.value)"
                   >
-                    <span class="style-preset-tile__text">{{
-                      s.length > 56 ? `${s.slice(0, 54)}…` : s
-                    }}</span>
+                    <span class="style-preset-tile__text">{{ item.label }}</span>
                   </button>
                 </div>
               </div>
@@ -443,15 +452,23 @@ const onSubmit = async () => {
           </div>
 
           <div class="inspire-panel">
-            <div class="inspire-panel__bar">
-              <div class="inspire-panel__bar-row">
-                <span class="inspire-panel__title">灵感预设库</span>
-                <span class="inspire-panel__badge">本地</span>
-              </div>
-              <p class="inspire-panel__sub">分栏查看：不必在一屏里拖很长</p>
-            </div>
-
-            <el-tabs v-model="inspirePresetTab" type="card" class="inspire-tabs">
+            <el-collapse v-model="inspireLibraryNames" class="inspire-library-collapse">
+              <el-collapse-item name="library">
+                <template #title>
+                  <div class="inspire-library-title-wrap">
+                    <div class="inspire-library-title">
+                      <span class="inspire-panel__title">灵感预设库</span>
+                      <span class="inspire-panel__badge">本地</span>
+                    </div>
+                    <span
+                      v-if="form.customMode && !inspireLibraryNames.includes('library')"
+                      class="inspire-library-title__sub"
+                    >
+                      已收起以节省版面，点此展开
+                    </span>
+                  </div>
+                </template>
+                <el-tabs v-model="inspirePresetTab" type="card" class="inspire-tabs">
               <el-tab-pane label="撰写要点" name="rules" lazy>
                 <div class="preset-tab-inner">
                   <ul class="preset-rule-cards">
@@ -505,7 +522,9 @@ const onSubmit = async () => {
                   </div>
                 </div>
               </el-tab-pane>
-            </el-tabs>
+                </el-tabs>
+              </el-collapse-item>
+            </el-collapse>
           </div>
 
           <div class="submit-row">
@@ -540,7 +559,8 @@ const onSubmit = async () => {
         <section class="tips-card melodify-glass-card">
           <h2>创作建议</h2>
           <ol>
-            <li>用「灵感预设库」里的<strong>分栏</strong>切换要点、整段与标签，避免长列表拖屏。</li>
+            <li>「灵感预设库」可<strong>折叠</strong>；自定义模式下默认收起以缩短页面，需要时再展开。</li>
+            <li>展开后用分栏切换要点、整段与标签。</li>
             <li>先写情绪、风格和场景，再补充乐器与人声。</li>
             <li><strong>简单模式</strong>只有「创作描述」；<strong>自定义 + 人声</strong>请把逐行歌词放在「精确歌词」，与上面的补充描述区分开。</li>
             <li><strong>自定义 + 纯器乐</strong>只需标题与风格，氛围描述选填。</li>
@@ -600,8 +620,8 @@ const onSubmit = async () => {
 
 /* —— 自定义参数块 —— */
 .custom-panel {
-  margin-bottom: 1.25rem;
-  padding: 1.15rem 1.2rem 1.2rem;
+  margin-bottom: 0.85rem;
+  padding: 0.85rem 1rem 0.95rem;
   border-radius: var(--melodify-radius-lg);
   border: 1px solid var(--melodify-divider-strong);
   background: linear-gradient(165deg, var(--el-color-primary-light-9) 0%, var(--melodify-card-solid) 42%);
@@ -609,8 +629,8 @@ const onSubmit = async () => {
 }
 
 .custom-panel__head {
-  margin-bottom: 1rem;
-  padding-bottom: 0.85rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.65rem;
   border-bottom: 1px solid var(--melodify-divider);
 }
 
@@ -640,13 +660,13 @@ const onSubmit = async () => {
 }
 
 .custom-presets-block {
-  margin-top: 1.1rem;
-  padding-top: 1.05rem;
+  margin-top: 0.75rem;
+  padding-top: 0.85rem;
   border-top: 1px solid var(--melodify-divider);
 }
 
 .preset-subsection + .preset-subsection {
-  margin-top: 1rem;
+  margin-top: 0.75rem;
 }
 
 .preset-subsection__label {
@@ -661,23 +681,24 @@ const onSubmit = async () => {
 
 .style-preset-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
-  gap: 0.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 148px), 1fr));
+  gap: 0.45rem;
 }
 
 .style-preset-tile {
   display: flex;
   align-items: flex-start;
   text-align: left;
-  min-height: 3.1rem;
-  padding: 0.55rem 0.65rem;
+  min-height: 2.5rem;
+  padding: 0.45rem 0.55rem;
   border-radius: var(--melodify-radius-sm);
   border: 1px solid var(--melodify-divider-strong);
   background: var(--melodify-card-solid);
   cursor: pointer;
   font-family: inherit;
-  font-size: 0.72rem;
-  line-height: 1.35;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.3;
   color: var(--melodify-strong);
   transition:
     border-color 0.15s ease,
@@ -698,8 +719,8 @@ const onSubmit = async () => {
 
 .style-preset-tile__text {
   display: -webkit-box;
-  line-clamp: 3;
-  -webkit-line-clamp: 3;
+  line-clamp: 2;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -765,9 +786,9 @@ const onSubmit = async () => {
   border-style: solid;
 }
 
-/* —— 灵感预设：顶栏 + 分栏 —— */
+/* —— 灵感预设：可折叠 + 分栏 —— */
 .inspire-panel {
-  margin-bottom: 1rem;
+  margin-bottom: 0.85rem;
   border: 1px solid var(--melodify-divider-strong);
   border-radius: var(--melodify-radius-lg);
   overflow: hidden;
@@ -775,16 +796,54 @@ const onSubmit = async () => {
   box-shadow: var(--melodify-shadow-card);
 }
 
-.inspire-panel__bar {
-  padding: 0.85rem 1rem 0.65rem;
+.inspire-library-collapse {
+  border: none;
+}
+
+.inspire-library-collapse :deep(.el-collapse-item__header) {
+  height: auto;
+  min-height: 2.75rem;
+  padding: 0.65rem 0.85rem;
+  line-height: 1.35;
+  font-weight: 600;
   background: linear-gradient(180deg, #fafafa 0%, var(--melodify-card-solid) 100%);
   border-bottom: 1px solid var(--melodify-divider);
 }
 
-.inspire-panel__bar-row {
+.inspire-library-collapse :deep(.el-collapse-item__wrap) {
+  border-bottom: none;
+}
+
+.inspire-library-collapse :deep(.el-collapse-item__content) {
+  padding: 0;
+}
+
+.inspire-library-collapse :deep(.el-collapse-item__arrow) {
+  margin-left: 0.5rem;
+  color: var(--melodify-muted);
+}
+
+.inspire-library-title-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+  text-align: left;
+  width: 100%;
+  padding-right: 0.25rem;
+}
+
+.inspire-library-title {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.inspire-library-title__sub {
+  font-size: 0.72rem;
+  color: var(--melodify-muted);
+  font-weight: 500;
+  line-height: 1.35;
 }
 
 .inspire-panel__title {
@@ -804,15 +863,8 @@ const onSubmit = async () => {
   border: 1px solid rgba(var(--melodify-primary-rgb), 0.15);
 }
 
-.inspire-panel__sub {
-  margin: 0.35rem 0 0;
-  font-size: 0.75rem;
-  color: var(--melodify-muted);
-  line-height: 1.4;
-}
-
 .inspire-tabs {
-  --inspire-tabs-pad: 0.75rem 0.85rem 1rem;
+  --inspire-tabs-pad: 0.65rem 0.8rem 0.85rem;
 }
 
 .inspire-tabs :deep(.el-tabs__header) {
@@ -855,7 +907,7 @@ const onSubmit = async () => {
 }
 
 .dim-tags-scroll {
-  max-height: min(380px, 52vh);
+  max-height: min(280px, 44vh);
   overflow-y: auto;
   padding-right: 0.25rem;
   margin-right: -0.15rem;

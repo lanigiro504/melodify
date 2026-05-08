@@ -51,8 +51,7 @@ const onLogout = () => {
     <a href="#melodify-main" class="melodify-skip-link">跳到主内容</a>
     <header class="app-header">
       <div class="header-inner">
-        <RouterLink class="brand" to="/">
-          <span class="brand-mark-ring" aria-hidden="true">
+          <RouterLink class="brand" to="/">
             <img
               class="brand-mark"
               :src="brandLogoSrc"
@@ -62,12 +61,11 @@ const onLogout = () => {
               decoding="async"
               fetchpriority="high"
             />
-          </span>
-          <span class="brand-text">
-            <span class="brand-name">Melodify</span>
-            <span class="brand-subtitle">AI Music Studio</span>
-          </span>
-        </RouterLink>
+            <span class="brand-text">
+              <span class="brand-name">Melodify</span>
+              <span class="brand-subtitle">AI 音乐工作室</span>
+            </span>
+          </RouterLink>
 
         <nav class="app-nav" aria-label="主导航">
           <RouterLink to="/" class="nav-link">首页</RouterLink>
@@ -163,37 +161,13 @@ const onLogout = () => {
   opacity: 0.94;
 }
 
-.brand:hover .brand-mark-ring {
-  transform: scale(1.02);
-  border-color: rgba(var(--melodify-primary-rgb), 0.25);
-}
-
-.brand-mark-ring {
-  flex-shrink: 0;
-  display: grid;
-  place-items: center;
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: var(--melodify-radius-sm);
-  padding: 0.15rem;
-  background: var(--melodify-card-solid);
-  border: 1px solid var(--melodify-divider-strong);
-  transition:
-    border-color 0.2s ease,
-    transform 0.2s ease;
-}
-
 .brand-mark {
-  width: 2.05rem;
-  height: 2.05rem;
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
   display: block;
-  border-radius: calc(var(--melodify-radius-sm) - 2px);
+  border-radius: var(--melodify-radius-sm);
   object-fit: contain;
-  background: var(--melodify-surface-muted);
-}
-
-.brand:hover .brand-mark {
-  filter: none;
 }
 
 .brand-text {
@@ -218,10 +192,9 @@ const onLogout = () => {
 
 .brand-subtitle {
   margin-top: -0.02rem;
-  font-size: 0.65rem;
+  font-size: 0.68rem;
   color: var(--melodify-muted);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  letter-spacing: 0.06em;
   font-weight: 500;
 }
 
