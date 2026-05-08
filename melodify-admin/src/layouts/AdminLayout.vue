@@ -37,8 +37,8 @@ const handleLogout = () => {
         router
         class="menu"
         background-color="transparent"
-        text-color="#b8c0d4"
-        active-text-color="#f1f5f9"
+        text-color="#a3a3a3"
+        active-text-color="#fafafa"
       >
         <template v-for="section in adminNavSections" :key="section.type === 'item' ? section.leaf.path : section.index">
           <el-menu-item v-if="section.type === 'item'" :index="`/${section.leaf.path}`">
@@ -100,12 +100,12 @@ const handleLogout = () => {
   flex: none;
   display: grid;
   place-items: center;
-  border-radius: 0.75rem;
+  border-radius: var(--el-border-radius-base);
   font-size: 1.05rem;
   font-weight: 800;
   color: #fff;
-  background: linear-gradient(145deg, var(--admin-accent, #6d5dfc), #5b4cdb);
-  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.35);
+  background: var(--admin-accent);
+  box-shadow: none;
 }
 .brand-text {
   display: flex;
@@ -122,7 +122,7 @@ const handleLogout = () => {
 .brand-tag {
   font-size: 10px;
   font-weight: 600;
-  color: rgba(148, 163, 184, 0.95);
+  color: var(--admin-text-muted, #737373);
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
@@ -145,8 +145,8 @@ const handleLogout = () => {
 }
 
 .menu :deep(.el-menu-item.is-active) {
-  background: linear-gradient(92deg, rgba(109, 93, 252, 0.42), rgba(109, 93, 252, 0.12)) !important;
-  box-shadow: inset 3px 0 0 0 var(--admin-accent, #6d5dfc);
+  background: rgba(var(--admin-primary-rgb), 0.14) !important;
+  box-shadow: inset 3px 0 0 0 var(--admin-accent);
   font-weight: 600;
 }
 
@@ -155,10 +155,10 @@ const handleLogout = () => {
   align-items: center;
   justify-content: space-between;
   padding: 0 clamp(1rem, 3vw, 1.65rem);
-  border-bottom: 1px solid rgba(148, 163, 184, 0.14);
-  background: rgba(255, 255, 255, 0.86);
-  backdrop-filter: saturate(1.25) blur(14px);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.7) inset;
+  border-bottom: 1px solid var(--admin-border-strong);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.85) inset;
 }
 .header-left {
   display: flex;

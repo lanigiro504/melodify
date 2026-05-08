@@ -72,10 +72,7 @@ const onSubmit = async () => {
   align-items: center;
   justify-content: center;
   padding: 2rem 1.25rem;
-  background:
-    radial-gradient(circle at 18% 12%, rgba(109, 93, 252, 0.22), transparent 42%),
-    radial-gradient(circle at 92% 6%, rgba(56, 189, 248, 0.12), transparent 38%),
-    linear-gradient(155deg, #12122a 0%, #1a1a32 36%, #14142a 100%);
+  background: var(--admin-canvas-bg, #fafafa);
 }
 
 .login-head {

@@ -27,7 +27,7 @@ onMounted(() => void load())
 <template>
   <div v-loading="loading" class="dash-root">
     <div v-if="data" class="dash-grid">
-      <el-card class="metric" shadow="hover">
+      <el-card class="metric" shadow="never">
         <div class="metric-icon users">
           <el-icon><User /></el-icon>
         </div>
@@ -36,7 +36,7 @@ onMounted(() => void load())
           <strong class="metric-value">{{ data.usersTotal }}</strong>
         </div>
       </el-card>
-      <el-card class="metric" shadow="hover">
+      <el-card class="metric" shadow="never">
         <div class="metric-icon gen">
           <el-icon><Monitor /></el-icon>
         </div>
@@ -45,7 +45,7 @@ onMounted(() => void load())
           <strong class="metric-value">{{ data.musicTasksGenerating }}</strong>
         </div>
       </el-card>
-      <el-card class="metric" shadow="hover">
+      <el-card class="metric" shadow="never">
         <div class="metric-icon ok">
           <el-icon><SuccessFilled /></el-icon>
         </div>
@@ -55,7 +55,7 @@ onMounted(() => void load())
           <span class="metric-sub">今日新建 {{ data.musicTasksTodayCreated }}</span>
         </div>
       </el-card>
-      <el-card class="metric" shadow="hover">
+      <el-card class="metric" shadow="never">
         <div class="metric-icon bad">
           <el-icon><CircleCloseFilled /></el-icon>
         </div>
@@ -64,7 +64,7 @@ onMounted(() => void load())
           <strong class="metric-value">{{ data.musicTasksTodayFailed }}</strong>
         </div>
       </el-card>
-      <el-card class="metric wide" shadow="hover">
+      <el-card class="metric wide" shadow="never">
         <div>
           <p class="metric-label">今日模拟支付入账</p>
           <strong class="metric-value">{{ data.rechargePaidTodayYuanApprox }} 元</strong>
@@ -73,7 +73,7 @@ onMounted(() => void load())
           </span>
         </div>
       </el-card>
-      <el-card class="metric wide" shadow="hover">
+      <el-card class="metric wide" shadow="never">
         <div>
           <p class="metric-label">公开作品总数</p>
           <strong class="metric-value">{{ data.publicAssetsTotal }}</strong>
@@ -101,10 +101,16 @@ onMounted(() => void load())
 }
 
 .metric {
+  border-radius: 14px;
+  border: 1px solid var(--admin-border-strong, rgba(0, 0, 0, 0.1));
+  box-shadow: none;
+}
+
+.metric :deep(.el-card__body) {
   display: flex;
   align-items: center;
   gap: 1rem;
-  border-radius: 12px;
+  width: 100%;
 }
 
 .metric.wide {
@@ -134,25 +140,36 @@ onMounted(() => void load())
 .metric-icon {
   width: 48px;
   height: 48px;
-  border-radius: 14px;
+  border-radius: var(--el-border-radius-base);
   display: grid;
   place-items: center;
-  color: #fff;
   flex: none;
   font-size: 22px;
+  border: 1px solid transparent;
 }
 
 .metric-icon.users {
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  background: var(--el-color-primary-light-9);
+  color: var(--el-color-primary);
+  border-color: rgba(var(--admin-primary-rgb), 0.14);
 }
+
 .metric-icon.gen {
-  background: linear-gradient(135deg, #0ea5e9, #22d3ee);
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-color: rgba(29, 78, 216, 0.12);
 }
+
 .metric-icon.ok {
-  background: linear-gradient(135deg, #10b981, #34d399);
+  background: #f0fdf4;
+  color: #15803d;
+  border-color: rgba(21, 128, 61, 0.12);
 }
+
 .metric-icon.bad {
-  background: linear-gradient(135deg, #f97316, #fb923c);
+  background: #fff7ed;
+  color: #c2410c;
+  border-color: rgba(194, 65, 12, 0.14);
 }
 
 .dash-footnote {
