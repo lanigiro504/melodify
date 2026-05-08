@@ -40,7 +40,8 @@ const modelOptions = [
 ]
 
 const formRef = ref<FormInstance>()
-const presetCollapse = ref<string | string[]>(['inspire'])
+/** 灵感库：分页签（要点 / 整段 / 标签），避免单页折叠后过长滚动 */
+const inspirePresetTab = ref<'rules' | 'full' | 'tags'>('full')
 const submitting = ref(false)
 const pollTimer = ref<ReturnType<typeof setInterval> | null>(null)
 
@@ -442,50 +443,51 @@ const onSubmit = async () => {
           </div>
 
           <div class="inspire-panel">
-            <el-collapse v-model="presetCollapse" class="inspire-collapse">
-              <el-collapse-item name="inspire">
-                <template #title>
-                  <div class="inspire-collapse__head">
-                    <div class="inspire-collapse__row">
-                      <span class="inspire-collapse__title">灵感预设库</span>
-                      <span class="inspire-collapse__badge">本地</span>
-                    </div>
-                    <span class="inspire-collapse__sub">撰写规则 · 整段替换 · 标签追加</span>
+            <div class="inspire-panel__bar">
+              <div class="inspire-panel__bar-row">
+                <span class="inspire-panel__title">灵感预设库</span>
+                <span class="inspire-panel__badge">本地</span>
+              </div>
+              <p class="inspire-panel__sub">分栏查看：不必在一屏里拖很长</p>
+            </div>
+
+            <el-tabs v-model="inspirePresetTab" type="card" class="inspire-tabs">
+              <el-tab-pane label="撰写要点" name="rules" lazy>
+                <div class="preset-tab-inner">
+                  <ul class="preset-rule-cards">
+                    <li v-for="(line, idx) in PROMPT_COMPOSITION_RULES" :key="idx" class="preset-rule-card">
+                      <span class="preset-rule-card__idx">{{ idx + 1 }}</span>
+                      <span class="preset-rule-card__text">{{ line }}</span>
+                    </li>
+                  </ul>
+                </div>
+              </el-tab-pane>
+
+              <el-tab-pane label="整段示例" name="full" lazy>
+                <div class="preset-tab-inner">
+                  <p class="preset-section__hint preset-section__hint--tab">点击卡片即用完整描述替换当前「创作描述 / 器乐氛围」</p>
+                  <div class="full-preset-grid">
+                    <button
+                      v-for="item in FULL_PROMPT_PRESETS"
+                      :key="item.id"
+                      type="button"
+                      class="full-preset-card"
+                      :title="item.text"
+                      @click="applyFullPresetText(item.text)"
+                    >
+                      <span class="full-preset-card__name">{{ item.label }}</span>
+                      <span class="full-preset-card__peek">{{ item.text }}</span>
+                    </button>
                   </div>
-                </template>
+                </div>
+              </el-tab-pane>
 
-                <div class="preset-body">
-                  <section class="preset-section preset-section--rules">
-                    <h3 class="preset-section__h">撰写要点</h3>
-                    <ul class="preset-rule-cards">
-                      <li v-for="(line, idx) in PROMPT_COMPOSITION_RULES" :key="idx" class="preset-rule-card">
-                        <span class="preset-rule-card__idx">{{ idx + 1 }}</span>
-                        <span class="preset-rule-card__text">{{ line }}</span>
-                      </li>
-                    </ul>
-                  </section>
-
-                  <section class="preset-section">
-                    <h3 class="preset-section__h">整段示例</h3>
-                    <p class="preset-section__hint">点击即用完整描述替换当前「创作描述 / 器乐氛围」</p>
-                    <div class="full-preset-grid">
-                      <button
-                        v-for="item in FULL_PROMPT_PRESETS"
-                        :key="item.id"
-                        type="button"
-                        class="full-preset-card"
-                        :title="item.text"
-                        @click="applyFullPresetText(item.text)"
-                      >
-                        <span class="full-preset-card__name">{{ item.label }}</span>
-                        <span class="full-preset-card__peek">{{ item.text }}</span>
-                      </button>
-                    </div>
-                  </section>
-
-                  <section class="preset-section preset-section--tags">
-                    <h3 class="preset-section__h">按维度追加</h3>
-                    <p class="preset-section__hint">依次点击，片段会追加到上方描述（自动加逗号）</p>
+              <el-tab-pane label="按维度追加" name="tags" lazy>
+                <div class="preset-tab-inner preset-tab-inner--tags">
+                  <p class="preset-section__hint preset-section__hint--tab">
+                    依次点击标签，片段会追加到上方描述（自动加逗号）
+                  </p>
+                  <div class="dim-tags-scroll">
                     <div v-for="dim in PROMPT_DIMENSIONS" :key="dim.id" class="dim-row">
                       <span class="dim-row__label">{{ dim.title }}</span>
                       <div class="dim-row__tags">
@@ -500,10 +502,10 @@ const onSubmit = async () => {
                         </button>
                       </div>
                     </div>
-                  </section>
+                  </div>
                 </div>
-              </el-collapse-item>
-            </el-collapse>
+              </el-tab-pane>
+            </el-tabs>
           </div>
 
           <div class="submit-row">
@@ -538,7 +540,7 @@ const onSubmit = async () => {
         <section class="tips-card melodify-glass-card">
           <h2>创作建议</h2>
           <ol>
-            <li>展开下方「灵感预设库」：先看撰写要点，再用整段示例或标签拼装。</li>
+            <li>用「灵感预设库」里的<strong>分栏</strong>切换要点、整段与标签，避免长列表拖屏。</li>
             <li>先写情绪、风格和场景，再补充乐器与人声。</li>
             <li><strong>简单模式</strong>只有「创作描述」；<strong>自定义 + 人声</strong>请把逐行歌词放在「精确歌词」，与上面的补充描述区分开。</li>
             <li><strong>自定义 + 纯器乐</strong>只需标题与风格，氛围描述选填。</li>
@@ -763,12 +765,9 @@ const onSubmit = async () => {
   border-style: solid;
 }
 
-/* —— 灵感预设折叠面板 —— */
+/* —— 灵感预设：顶栏 + 分栏 —— */
 .inspire-panel {
   margin-bottom: 1rem;
-}
-
-.inspire-collapse {
   border: 1px solid var(--melodify-divider-strong);
   border-radius: var(--melodify-radius-lg);
   overflow: hidden;
@@ -776,51 +775,25 @@ const onSubmit = async () => {
   box-shadow: var(--melodify-shadow-card);
 }
 
-.inspire-collapse :deep(.el-collapse-item__header) {
-  height: auto;
-  min-height: 3.35rem;
-  padding: 0.85rem 1rem;
-  line-height: 1.35;
-  font-weight: 600;
+.inspire-panel__bar {
+  padding: 0.85rem 1rem 0.65rem;
   background: linear-gradient(180deg, #fafafa 0%, var(--melodify-card-solid) 100%);
   border-bottom: 1px solid var(--melodify-divider);
 }
 
-.inspire-collapse :deep(.el-collapse-item__wrap) {
-  border-bottom: none;
-  background: var(--melodify-card-solid);
-}
-
-.inspire-collapse :deep(.el-collapse-item__content) {
-  padding: 0;
-}
-
-.inspire-collapse :deep(.el-collapse-item__arrow) {
-  margin-left: 0.75rem;
-  color: var(--melodify-muted);
-}
-
-.inspire-collapse__head {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.25rem;
-  text-align: left;
-}
-
-.inspire-collapse__row {
+.inspire-panel__bar-row {
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
-.inspire-collapse__title {
+.inspire-panel__title {
   font-size: 0.95rem;
   font-weight: 700;
   color: var(--melodify-strong);
 }
 
-.inspire-collapse__badge {
+.inspire-panel__badge {
   font-size: 0.65rem;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -831,25 +804,76 @@ const onSubmit = async () => {
   border: 1px solid rgba(var(--melodify-primary-rgb), 0.15);
 }
 
-.inspire-collapse__sub {
+.inspire-panel__sub {
+  margin: 0.35rem 0 0;
   font-size: 0.75rem;
-  font-weight: 500;
   color: var(--melodify-muted);
+  line-height: 1.4;
 }
 
-.preset-body {
-  padding: 1rem 1.05rem 1.2rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.35rem;
+.inspire-tabs {
+  --inspire-tabs-pad: 0.75rem 0.85rem 1rem;
 }
 
-.preset-section__h {
-  margin: 0 0 0.45rem;
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: var(--melodify-strong);
-  letter-spacing: 0.02em;
+.inspire-tabs :deep(.el-tabs__header) {
+  margin: 0;
+  padding: 0.5rem 0.65rem 0;
+  background: var(--melodify-card-solid);
+  border-bottom: 1px solid var(--melodify-divider);
+}
+
+.inspire-tabs :deep(.el-tabs__nav-wrap)::after {
+  display: none;
+}
+
+.inspire-tabs :deep(.el-tabs__item) {
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0 1rem;
+  height: 2.25rem;
+}
+
+.inspire-tabs :deep(.el-tabs__item.is-active) {
+  color: var(--el-color-primary);
+}
+
+.inspire-tabs :deep(.el-tabs__content) {
+  padding: 0;
+}
+
+.preset-tab-inner {
+  padding: var(--inspire-tabs-pad);
+}
+
+.preset-tab-inner--tags {
+  padding-bottom: 0.65rem;
+}
+
+.preset-section__hint--tab {
+  margin-top: 0;
+  margin-bottom: 0.65rem;
+}
+
+.dim-tags-scroll {
+  max-height: min(380px, 52vh);
+  overflow-y: auto;
+  padding-right: 0.25rem;
+  margin-right: -0.15rem;
+  scroll-behavior: smooth;
+  scrollbar-gutter: stable;
+}
+
+.dim-tags-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.dim-tags-scroll::-webkit-scrollbar-thumb {
+  background: rgba(var(--melodify-primary-rgb), 0.2);
+  border-radius: 999px;
+}
+
+.dim-tags-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(var(--melodify-primary-rgb), 0.35);
 }
 
 .preset-section__hint {
@@ -952,20 +976,16 @@ const onSubmit = async () => {
   overflow: hidden;
 }
 
-.preset-section--tags {
-  padding-top: 0.25rem;
-}
-
 .dim-row {
   padding: 0.65rem 0 0.75rem;
   border-bottom: 1px solid var(--melodify-divider);
 }
 
-.dim-row:first-of-type {
+.dim-row:first-child {
   padding-top: 0;
 }
 
-.dim-row:last-of-type {
+.dim-row:last-child {
   border-bottom: none;
   padding-bottom: 0;
 }
@@ -1134,6 +1154,19 @@ const onSubmit = async () => {
 @media (max-width: 680px) {
   .form-row {
     grid-template-columns: 1fr;
+  }
+
+  .inspire-tabs :deep(.el-tabs__item) {
+    padding: 0 0.55rem;
+    font-size: 0.76rem;
+  }
+
+  .inspire-tabs :deep(.el-tabs__nav) {
+    width: 100%;
+  }
+
+  .inspire-tabs :deep(.el-tabs__nav-scroll) {
+    overflow-x: auto;
   }
 }
 </style>
