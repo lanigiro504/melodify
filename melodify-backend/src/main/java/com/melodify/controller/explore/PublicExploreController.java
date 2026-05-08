@@ -3,8 +3,10 @@ package com.melodify.controller.explore;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.melodify.common.result.Result;
 import com.melodify.model.vo.MusicExploreItemVO;
+import com.melodify.security.MelodifyUserPrincipal;
 import com.melodify.service.PublicExploreService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -21,6 +23,7 @@ public class PublicExploreController {
 
 	@GetMapping("/assets")
 	public Result<IPage<MusicExploreItemVO>> assets(
+			@AuthenticationPrincipal MelodifyUserPrincipal principal,
 			@RequestParam(defaultValue = "1") long current,
 			@RequestParam(defaultValue = "12") long size,
 			@RequestParam(required = false) String keyword,
@@ -28,6 +31,7 @@ public class PublicExploreController {
 		long page = Math.max(1, current);
 		long pageSize = Math.min(Math.max(1, size), MAX_PAGE_SIZE);
 		String mode = sort == null || sort.isBlank() ? "NEWEST" : sort.trim();
-		return Result.success(publicExploreService.pagePublicAssets(page, pageSize, keyword, mode));
+		Long viewerId = principal != null ? principal.getUserId() : null;
+		return Result.success(publicExploreService.pagePublicAssets(page, pageSize, keyword, mode, viewerId));
 	}
 }

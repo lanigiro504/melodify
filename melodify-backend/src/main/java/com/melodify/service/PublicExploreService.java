@@ -31,9 +31,10 @@ public class PublicExploreService {
 	/**
 	 * @param keyword 可选；匹配资产标题或任务的创作描述 {@code prompt}。
 	 * @param sortMode  {@code NEWEST}（默认）按发布时间；{@code LIKES} 按点赞数优先。
+	 * @param optionalViewerUserId 请求若带有效 JWT（已登录），则返回每条 {@code liked}
 	 */
 	public IPage<MusicExploreItemVO> pagePublicAssets(long current, long size, String keyword,
-			String sortMode) {
+			String sortMode, Long optionalViewerUserId) {
 		LambdaQueryWrapper<MusicAsset> wrapper = new LambdaQueryWrapper<MusicAsset>()
 				.eq(MusicAsset::getIsPublic, 1)
 				.eq(MusicAsset::getStatus, 1);
@@ -67,15 +68,31 @@ public class PublicExploreService {
 
 		Map<Long, MusicTask> taskByPk = loadTasks(assets);
 		Map<Long, Long> likesByAsset = countLikes(assets);
+		Set<Long> likedByViewer = likedAssetIdsByViewer(assets, optionalViewerUserId);
 
 		List<MusicExploreItemVO> rows = assets.stream()
 				.map(a -> MusicExploreItemVO.of(a, taskByPk.get(a.getTaskId()),
-						likesByAsset.getOrDefault(a.getId(), 0L)))
+						likesByAsset.getOrDefault(a.getId(), 0L),
+						likedByViewer.contains(a.getId())))
 				.toList();
 
 		Page<MusicExploreItemVO> out = new Page<>(raw.getCurrent(), raw.getSize(), raw.getTotal());
 		out.setRecords(rows);
 		return out;
+	}
+
+	private Set<Long> likedAssetIdsByViewer(List<MusicAsset> assets, Long viewerUserId) {
+		if (viewerUserId == null || assets.isEmpty()) {
+			return Set.of();
+		}
+		List<Long> ids = assets.stream().map(MusicAsset::getId).toList();
+		return musicLikeService.lambdaQuery()
+				.in(MusicLike::getAssetId, ids)
+				.eq(MusicLike::getUserId, viewerUserId)
+				.list()
+				.stream()
+				.map(MusicLike::getAssetId)
+				.collect(Collectors.toSet());
 	}
 
 	private Map<Long, MusicTask> loadTasks(List<MusicAsset> assets) {

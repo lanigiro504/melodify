@@ -1,11 +1,15 @@
 <script setup lang="ts">
 /**
- * 公开广场：无需登录即可浏览 isPublic=1 的作品并发起到全局播放器。
+ * 公开广场：试听、关键词检索、最热排序、登录用户点赞（与详情页共用 API）。
  */
+import { Search } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import { storeToRefs } from 'pinia'
 import { onMounted, reactive, ref, watch } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import { pageExploreAssets, type ExploreAssetItem, type ExploreSortMode } from '@/api/explore'
+import { likeMusicAsset, unlikeMusicAsset } from '@/api/musicAssets'
+import { useAuthStore } from '@/stores/auth'
 import { usePlayerStore } from '@/stores/player'
 import { unwrapResult } from '@/utils/apiResult'
 import { exploreItemPlaySubtitle } from '@/utils/exploreDisplay'
@@ -14,7 +18,10 @@ import { showSubmitError } from '@/utils/showSubmitError'
 
 defineOptions({ name: 'ExplorePage' })
 
+const router = useRouter()
 const player = usePlayerStore()
+const { isAuthenticated } = storeToRefs(useAuthStore())
+
 const loading = ref(false)
 const rows = ref<ExploreAssetItem[]>([])
 const total = ref(0)
@@ -22,6 +29,10 @@ const pager = reactive({ current: 1, size: 12 })
 const filters = reactive({ keyword: '', sort: 'NEWEST' as ExploreSortMode })
 
 const EXPLORE_PAGE_SIZE_MAX = 48
+
+const likeBusyId = ref<number | null>(null)
+
+let keywordDebounce: ReturnType<typeof setTimeout> | null = null
 
 async function fetchList() {
   loading.value = true
@@ -33,7 +44,11 @@ async function fetchList() {
         { keyword: filters.keyword.trim() || undefined, sort: filters.sort },
       ),
     )
-    rows.value = page.records
+    rows.value = page.records.map((r) => ({
+      ...r,
+      liked: Boolean(r.liked),
+      likeCount: Number(r.likeCount) || 0,
+    }))
     total.value = page.total
   } catch (e) {
     showSubmitError(e, '加载广场作品失败')
@@ -64,42 +79,112 @@ watch(
   },
 )
 
+watch(
+  () => filters.keyword,
+  () => {
+    if (keywordDebounce) clearTimeout(keywordDebounce)
+    keywordDebounce = setTimeout(() => {
+      keywordDebounce = null
+      pager.current = 1
+      void fetchList()
+    }, 420)
+  },
+)
+
+watch(isAuthenticated, () => {
+  void fetchList()
+})
+
 const applySearch = () => {
+  if (keywordDebounce) {
+    clearTimeout(keywordDebounce)
+    keywordDebounce = null
+  }
   pager.current = 1
   void fetchList()
+}
+
+const toggleLike = async (item: ExploreAssetItem) => {
+  if (!isAuthenticated.value) {
+    void router.push({ path: '/login', query: { redirect: '/explore' } })
+    return
+  }
+  const wasLiked = Boolean(item.liked)
+  likeBusyId.value = item.id
+  try {
+    if (wasLiked) {
+      unwrapResult(await unlikeMusicAsset(item.id))
+      item.liked = false
+      item.likeCount = Math.max(0, item.likeCount - 1)
+    } else {
+      unwrapResult(await likeMusicAsset(item.id))
+      item.liked = true
+      item.likeCount = item.likeCount + 1
+    }
+  } catch (e) {
+    showSubmitError(e, wasLiked ? '取消点赞失败' : '点赞失败')
+  } finally {
+    likeBusyId.value = null
+  }
+}
+
+const onPageSizeChange = () => {
+  pager.current = 1
+  void fetchList()
+}
+
+const clearKeywordAndSearch = () => {
+  filters.keyword = ''
+  applySearch()
 }
 
 onMounted(() => void fetchList())
 </script>
 
 <template>
-  <div class="page-stack">
-    <section class="page-hero melodify-glass-card">
-      <div>
-        <p class="page-eyebrow">Explore</p>
-        <h1 class="page-title page-title--lg">作品广场</h1>
-        <p class="page-desc page-desc--wide">创作者公开分享的成品，可按关键词检索，或按最热排序；无需登录便可试听。</p>
+  <div class="page-stack explore-page">
+    <section class="melodify-glass-card explore-hero">
+      <div class="explore-hero-head">
+        <div>
+          <p class="page-eyebrow">Explore</p>
+          <h1 class="page-title page-title--lg">作品广场</h1>
+          <p class="page-desc page-desc--wide">
+            公开作品可<strong>免费试听</strong>；登录后可<strong>点赞</strong>。支持标题/描述搜索与按热度排序。
+          </p>
+        </div>
       </div>
       <div class="explore-toolbar">
         <el-input
           v-model="filters.keyword"
-          placeholder="搜索标题或创作描述关键词"
+          placeholder="搜索标题或创作描述（自动搜索，也可按回车立即查询）"
           clearable
           class="explore-search"
+          :prefix-icon="Search"
           @keyup.enter="applySearch"
+          @clear="applySearch"
         />
-        <el-select v-model="filters.sort" class="explore-sort" placeholder="排序">
+        <el-select v-model="filters.sort" class="explore-sort" aria-label="排序方式">
           <el-option label="最新发布" value="NEWEST" />
           <el-option label="最热（点赞）" value="LIKES" />
         </el-select>
-        <el-button type="primary" round :loading="loading" @click="applySearch">搜索</el-button>
+        <el-select v-model="pager.size" class="explore-pagesize" @change="onPageSizeChange">
+          <el-option :value="12" label="每页 12 条" />
+          <el-option :value="24" label="每页 24 条" />
+          <el-option :value="36" label="每页 36 条" />
+        </el-select>
+        <el-button type="primary" round :loading="loading" @click="applySearch">立即搜索</el-button>
         <el-button round :loading="loading" @click="fetchList">刷新</el-button>
       </div>
     </section>
 
     <section v-loading="loading" class="explore-grid">
-      <el-empty v-if="!rows.length && !loading" description="暂时没有公开作品">
-        <RouterLink class="explore-empty-cta" to="/generate">前往创作（需登录）</RouterLink>
+      <el-empty v-if="!rows.length && !loading" description="暂无符合条件的公开作品">
+        <div class="empty-actions">
+          <el-button v-if="filters.keyword.trim()" text type="primary" @click="clearKeywordAndSearch">
+            清空关键词
+          </el-button>
+          <RouterLink class="explore-empty-cta" to="/generate">前往创作（需登录）</RouterLink>
+        </div>
       </el-empty>
 
       <article v-for="item in rows" :key="item.id" class="explore-card soft-card">
@@ -111,9 +196,27 @@ onMounted(() => void fetchList())
           <p class="explore-card__prompt">{{ item.prompt?.trim() || '—' }}</p>
           <div class="explore-card__meta">
             <span>{{ item.durationSec ?? 0 }} 秒</span>
-            <span>{{ item.likeCount }} 赞</span>
+            <span class="meta-likes">
+              <span class="like-dot" :class="{ 'like-dot--on': item.liked }" aria-hidden="true" />
+              {{ item.likeCount }} 赞
+            </span>
           </div>
-          <el-button type="primary" round size="small" @click="onPlay(item)">播放</el-button>
+          <div class="explore-card__actions">
+            <el-button type="primary" round size="small" @click="onPlay(item)">播放</el-button>
+            <template v-if="isAuthenticated">
+              <el-button
+                round
+                size="small"
+                :type="item.liked ? 'warning' : 'default'"
+                :plain="!item.liked"
+                :loading="likeBusyId === item.id"
+                @click="toggleLike(item)"
+              >
+                {{ item.liked ? '已点赞' : '点赞' }}
+              </el-button>
+            </template>
+            <RouterLink v-else class="like-login-hint" to="/login?redirect=/explore">登录后点赞</RouterLink>
+          </div>
         </div>
       </article>
     </section>
@@ -137,26 +240,43 @@ onMounted(() => void fetchList())
 </template>
 
 <style scoped>
+.explore-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.explore-hero-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
 .explore-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
-  gap: 1.1rem;
+  grid-template-columns: repeat(auto-fill, minmax(17.5rem, 1fr));
+  gap: 1.15rem;
+  margin-top: 1rem;
 }
 
 .explore-card {
   display: grid;
   grid-template-columns: 4.75rem minmax(0, 1fr);
   gap: 1rem;
-  padding: 1.05rem 1.1rem;
+  padding: 1.05rem 1.15rem;
   border-radius: 1.15rem;
   transition:
-    box-shadow 0.2s ease,
-    border-color 0.2s ease;
+    box-shadow 0.22s ease,
+    border-color 0.22s ease,
+    transform 0.18s ease;
 }
 
 .explore-card:hover {
-  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.08);
-  border-color: rgba(99, 102, 241, 0.2);
+  box-shadow: 0 14px 40px rgba(15, 23, 42, 0.1);
+  border-color: rgba(99, 102, 241, 0.22);
+  transform: translateY(-2px);
 }
 
 .explore-card__cover {
@@ -197,15 +317,59 @@ onMounted(() => void fetchList())
 
 .explore-card__meta {
   display: flex;
-  gap: 0.75rem;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  align-items: center;
   color: var(--melodify-muted);
   font-size: 0.8rem;
   margin-bottom: 0.55rem;
 }
 
+.meta-likes {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.like-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.75);
+}
+
+.like-dot--on {
+  background: linear-gradient(135deg, #f59e0b, #f97316);
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.2);
+}
+
+.explore-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.like-login-hint {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--el-color-primary);
+  text-decoration: none;
+}
+
+.like-login-hint:hover {
+  text-decoration: underline;
+}
+
+.empty-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: center;
+}
+
 .explore-empty-cta {
   display: inline-block;
-  margin-top: 0.5rem;
   font-weight: 800;
   color: var(--el-color-primary);
   text-decoration: none;
@@ -218,6 +382,7 @@ onMounted(() => void fetchList())
 .pager-wrap {
   display: flex;
   justify-content: flex-end;
+  margin-top: 1rem;
 }
 
 .explore-toolbar {
@@ -228,10 +393,15 @@ onMounted(() => void fetchList())
 }
 
 .explore-search {
-  min-width: min(260px, 100%);
+  flex: 1 1 220px;
+  min-width: min(100%, 240px);
 }
 
 .explore-sort {
-  width: 146px;
+  width: 150px;
+}
+
+.explore-pagesize {
+  width: 128px;
 }
 </style>

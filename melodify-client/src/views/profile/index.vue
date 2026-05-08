@@ -1,9 +1,10 @@
 <script setup lang="ts">
 /**
- * 个人中心：资料编辑 + 积分概览与近期流水入口。
+ * 个人中心：侧栏身份与快捷入口 + 资料 / 积分分区。
  */
 import type { FormInstance, FormRules } from 'element-plus'
 import type { PointLog } from '@/types/api'
+import { Cpu, Headset, Trophy, Wallet } from '@element-plus/icons-vue'
 import { reactive, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { pageMyPointLogs } from '@/api/pointLogs'
@@ -108,197 +109,325 @@ void auth.refreshMe().catch(() => {})
 
 <template>
   <div class="page-stack profile-page">
-    <section class="page-hero melodify-glass-card profile-hero">
-      <div>
-        <p class="page-eyebrow">Account</p>
-        <h1 class="page-title page-title--lg">个人中心</h1>
-        <p class="page-desc page-desc--wide">
-          管理创作者资料、查看积分余额与近期流水；生成完成时还会通过
-          <strong>站内通知</strong>与 WebSocket 实时提醒。
-        </p>
-      </div>
-      <div class="hero-side">
-        <div class="points-pill">
-          <span>可用积分</span>
-          <strong>{{ auth.currentUser?.points ?? 0 }}</strong>
-        </div>
-        <RouterLink to="/recharge">
-          <el-button type="primary" round>去充值</el-button>
-        </RouterLink>
-      </div>
-    </section>
+    <div class="profile-shell">
+      <aside class="profile-aside melodify-glass-card">
+        <div class="aside-gradient" aria-hidden="true" />
+        <div class="aside-inner">
+          <div
+            class="aside-avatar"
+            :style="auth.currentUser?.avatar ? { backgroundImage: `url(${auth.currentUser.avatar})` } : {}"
+          >
+            <span v-if="!auth.currentUser?.avatar">{{ auth.avatarText }}</span>
+          </div>
+          <h1 class="aside-name">{{ auth.displayName || '创作者' }}</h1>
+          <p class="aside-username">@{{ auth.currentUser?.username }}</p>
 
-    <el-tabs v-model="activeTab" class="profile-tabs" type="border-card">
-      <el-tab-pane label="资料设置" name="profile">
-        <div class="profile-layout">
-          <div class="profile-card soft-card">
-            <div class="identity">
-              <span
-                class="identity-avatar"
-                :style="
-                  auth.currentUser?.avatar ? { backgroundImage: `url(${auth.currentUser.avatar})` } : {}
-                "
+          <div class="aside-stat">
+            <span class="aside-stat-label">可用积分</span>
+            <strong class="aside-stat-num">{{ auth.currentUser?.points ?? 0 }}</strong>
+          </div>
+
+          <div class="aside-actions">
+            <RouterLink class="aside-link" to="/recharge">
+              <el-icon><Wallet /></el-icon>
+              积分充值
+            </RouterLink>
+            <RouterLink class="aside-link" to="/generate">
+              <el-icon><Cpu /></el-icon>
+              去创作
+            </RouterLink>
+            <RouterLink class="aside-link" to="/works">
+              <el-icon><Headset /></el-icon>
+              我的作品
+            </RouterLink>
+            <RouterLink class="aside-link" to="/explore">
+              <el-icon><Trophy /></el-icon>
+              广场逛逛
+            </RouterLink>
+          </div>
+
+          <p class="aside-tip">资料与流水在右侧管理；生成完成会通过站内通知提醒您。</p>
+        </div>
+      </aside>
+
+      <main class="profile-main soft-card">
+        <el-tabs v-model="activeTab" class="profile-tabs" stretch>
+          <el-tab-pane label="资料设置" name="profile">
+            <div class="pane-body">
+              <p class="pane-lead">更新对外展示信息与联系方式（头像支持填写图片 URL）。</p>
+              <el-form
+                ref="profileRef"
+                :model="profileForm"
+                :rules="profileRules"
+                label-position="top"
+                class="profile-form-grid"
               >
-                <span v-if="!auth.currentUser?.avatar">{{ auth.avatarText }}</span>
-              </span>
-              <div>
-                <p class="identity-name">{{ auth.displayName || '未命名用户' }}</p>
-                <p class="identity-sub">用户名：{{ auth.currentUser?.username }}</p>
+                <el-form-item label="昵称" prop="nickname">
+                  <el-input
+                    v-model="profileForm.nickname"
+                    placeholder="对外展示的创作者昵称"
+                    maxlength="50"
+                    clearable
+                  />
+                </el-form-item>
+                <el-form-item label="头像地址" prop="avatar" class="full-span">
+                  <el-input v-model="profileForm.avatar" placeholder="https://…（外链图片地址）" maxlength="255" clearable />
+                </el-form-item>
+                <el-form-item label="邮箱" prop="email">
+                  <el-input v-model="profileForm.email" placeholder="选填" maxlength="100" clearable />
+                </el-form-item>
+                <el-form-item label="手机" prop="phone">
+                  <el-input v-model="profileForm.phone" placeholder="选填" maxlength="20" clearable />
+                </el-form-item>
+                <div class="full-span form-actions">
+                  <el-button type="primary" round size="large" :loading="savingProfile" @click="saveProfile">
+                    保存资料
+                  </el-button>
+                </div>
+              </el-form>
+            </div>
+          </el-tab-pane>
+          <el-tab-pane label="积分流水" name="points">
+            <div v-loading="logsLoading" class="pane-body points-pane">
+              <p class="pane-lead">最近积分变动明细；充值与生成扣费均可在此核对。</p>
+              <el-table v-if="logs.length" :data="logs" size="small" stripe class="log-table">
+                <el-table-column prop="createTime" label="时间" width="172" />
+                <el-table-column label="类型" width="104">
+                  <template #default="{ row }">
+                    {{ changeTypeText(row.changeType) }}
+                  </template>
+                </el-table-column>
+                <el-table-column prop="amount" label="变动" width="88" align="right" />
+                <el-table-column prop="balance" label="余额" width="88" align="right" />
+                <el-table-column prop="bizType" label="业务" min-width="100" />
+                <el-table-column prop="remark" label="备注" min-width="120" show-overflow-tooltip />
+              </el-table>
+              <el-empty v-else-if="!logsLoading" description="暂无积分记录" />
+              <div v-if="logTotal > logPager.size" class="pager">
+                <el-pagination
+                  background
+                  layout="prev, pager, next, total"
+                  :total="logTotal"
+                  :page-size="logPager.size"
+                  :current-page="logPager.current"
+                  @current-change="
+                    (c: number) => {
+                      logPager.current = c
+                      void fetchLogs()
+                    }
+                  "
+                />
               </div>
             </div>
-            <el-form
-              ref="profileRef"
-              :model="profileForm"
-              :rules="profileRules"
-              label-position="top"
-              class="profile-form"
-            >
-              <el-form-item label="昵称" prop="nickname">
-                <el-input v-model="profileForm.nickname" placeholder="创作者昵称" maxlength="50" clearable />
-              </el-form-item>
-              <el-form-item label="头像地址" prop="avatar">
-                <el-input v-model="profileForm.avatar" placeholder="https://..." maxlength="255" clearable />
-              </el-form-item>
-              <el-form-item label="邮箱" prop="email">
-                <el-input v-model="profileForm.email" placeholder="选填" maxlength="100" clearable />
-              </el-form-item>
-              <el-form-item label="手机" prop="phone">
-                <el-input v-model="profileForm.phone" placeholder="选填" maxlength="20" clearable />
-              </el-form-item>
-              <el-button type="primary" round :loading="savingProfile" @click="saveProfile">保存资料</el-button>
-            </el-form>
-          </div>
-        </div>
-      </el-tab-pane>
-      <el-tab-pane label="积分流水" name="points">
-        <div v-loading="logsLoading" class="points-panel soft-card">
-          <el-table v-if="logs.length" :data="logs" size="small" stripe style="width: 100%">
-            <el-table-column prop="createTime" label="时间" width="170" />
-            <el-table-column label="类型" width="100">
-              <template #default="{ row }">
-                {{ changeTypeText(row.changeType) }}
-              </template>
-            </el-table-column>
-            <el-table-column prop="amount" label="变动" width="90" />
-            <el-table-column prop="balance" label="余额" width="90" />
-            <el-table-column prop="bizType" label="业务" width="110" />
-            <el-table-column prop="remark" label="备注" min-width="140" show-overflow-tooltip />
-          </el-table>
-          <el-empty v-else-if="!logsLoading" description="暂无积分记录" />
-          <div v-if="logTotal > logPager.size" class="pager">
-            <el-pagination
-              background
-              layout="prev, pager, next"
-              :total="logTotal"
-              :page-size="logPager.size"
-              :current-page="logPager.current"
-              @current-change="
-                (c: number) => {
-                  logPager.current = c
-                  void fetchLogs()
-                }
-              "
-            />
-          </div>
-        </div>
-      </el-tab-pane>
-    </el-tabs>
+          </el-tab-pane>
+        </el-tabs>
+      </main>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.profile-hero {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
+.profile-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 17.5rem) minmax(0, 1fr);
+  gap: 1.35rem;
+  align-items: start;
 }
 
-.hero-side {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-
-.points-pill {
-  border-radius: 999px;
-  padding: 0.65rem 1.1rem;
-  border: 1px solid rgba(99, 102, 241, 0.18);
-  background: rgba(99, 102, 241, 0.06);
-}
-
-.points-pill span {
-  display: block;
-  font-size: 0.72rem;
-  color: var(--melodify-muted);
-}
-
-.points-pill strong {
-  font-size: 1.35rem;
-  color: var(--melodify-strong);
-}
-
-.profile-tabs {
-  margin-top: 1.25rem;
-  border-radius: 1.1rem;
+.profile-aside {
+  position: relative;
   overflow: hidden;
+  border-radius: 1.35rem;
+  padding: 0;
 }
 
-.profile-layout {
-  padding: 0.5rem 0 0.25rem;
+.aside-gradient {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 90% at 10% -10%, rgba(109, 93, 252, 0.35), transparent 52%),
+    radial-gradient(80% 60% at 100% 0%, rgba(14, 165, 233, 0.18), transparent 45%);
+  pointer-events: none;
 }
 
-.profile-card {
-  padding: 1.25rem 1.35rem;
-}
-
-.identity {
+.aside-inner {
+  position: relative;
+  padding: 1.65rem 1.35rem 1.45rem;
   display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 1rem;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.85rem;
 }
 
-.identity-avatar {
-  width: 3.6rem;
-  height: 3.6rem;
-  border-radius: 1.2rem;
-  background: #6366f1;
+.aside-avatar {
+  margin: 0 auto;
+  width: 5.5rem;
+  height: 5.5rem;
+  border-radius: 1.65rem;
+  background: linear-gradient(145deg, #6366f1, #8b5cf6);
   color: #fff;
   display: grid;
   place-items: center;
   font-weight: 900;
-  font-size: 1.2rem;
+  font-size: 1.85rem;
   background-size: cover;
   background-position: center;
+  box-shadow:
+    0 12px 32px rgba(99, 102, 241, 0.25),
+    0 0 0 4px rgba(255, 255, 255, 0.75);
 }
 
-.identity-name {
+.aside-name {
   margin: 0;
+  font-size: 1.35rem;
   font-weight: 900;
-  font-size: 1.08rem;
+  text-align: center;
   color: var(--melodify-strong);
+  letter-spacing: -0.03em;
 }
 
-.identity-sub {
-  margin: 0.2rem 0 0;
-  font-size: 0.85rem;
+.aside-username {
+  margin: -0.35rem 0 0;
+  font-size: 0.82rem;
+  text-align: center;
   color: var(--melodify-muted);
 }
 
-.profile-form {
-  max-width: 520px;
+.aside-stat {
+  margin-top: 0.35rem;
+  padding: 0.95rem 1rem;
+  border-radius: 1.15rem;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(99, 102, 241, 0.15);
 }
 
-.points-panel {
-  padding: 1rem;
+.aside-stat-label {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--melodify-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.aside-stat-num {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 1.85rem;
+  font-weight: 900;
+  color: #4f46e5;
+  letter-spacing: -0.04em;
+}
+
+.aside-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.aside-link {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 0.95rem;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--melodify-strong);
+  text-decoration: none;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(248, 250, 252, 0.85);
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease;
+}
+
+.aside-link:hover {
+  border-color: rgba(99, 102, 241, 0.35);
+  background: rgba(99, 102, 241, 0.07);
+  color: #4f46e5;
+}
+
+.aside-tip {
+  margin: 0.25rem 0 0;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--melodify-muted);
+  text-align: center;
+}
+
+.profile-main {
+  border-radius: 1.35rem;
+  padding: 0.25rem 0 0.5rem;
+  min-height: 22rem;
+}
+
+.profile-tabs {
+  --el-tabs-header-height: 48px;
+}
+
+.profile-tabs :deep(.el-tabs__header) {
+  margin: 0 1rem;
+  padding-top: 0.35rem;
+}
+
+.profile-tabs :deep(.el-tabs__nav-wrap::after) {
+  height: 1px;
+  background-color: rgba(148, 163, 184, 0.22);
+}
+
+.profile-tabs :deep(.el-tabs__item) {
+  font-weight: 800;
+  font-size: 0.95rem;
+}
+
+.profile-tabs :deep(.el-tabs__item.is-active) {
+  color: #4f46e5;
+}
+
+.pane-body {
+  padding: 1rem 1.35rem 1.5rem;
+}
+
+.pane-lead {
+  margin: 0 0 1.1rem;
+  font-size: 0.88rem;
+  color: var(--melodify-muted);
+  line-height: 1.55;
+}
+
+.profile-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.25rem 1.15rem;
+}
+
+.full-span {
+  grid-column: 1 / -1;
+}
+
+.form-actions {
+  margin-top: 0.35rem;
+}
+
+.log-table {
+  width: 100%;
+  border-radius: 0.85rem;
+  overflow: hidden;
 }
 
 .pager {
   display: flex;
   justify-content: flex-end;
-  margin-top: 0.75rem;
+  margin-top: 1rem;
+}
+
+@media (max-width: 900px) {
+  .profile-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-form-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

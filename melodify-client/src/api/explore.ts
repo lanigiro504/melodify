@@ -10,6 +10,8 @@ export interface ExploreAssetItem {
   durationSec?: number | null
   prompt?: string | null
   likeCount: number
+  /** 已登录且请求带 JWT 时由后端回填 */
+  liked?: boolean
   createTime?: string | null
 }
 

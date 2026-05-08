@@ -16,9 +16,11 @@ public class MusicExploreItemVO {
 	Integer durationSec;
 	String prompt;
 	long likeCount;
+	/** 当前请求用户是否已点赞；未登录或未带 JWT 时为 false */
+	boolean liked;
 	LocalDateTime createTime;
 
-	public static MusicExploreItemVO of(MusicAsset a, MusicTask task, long likeCount) {
+	public static MusicExploreItemVO of(MusicAsset a, MusicTask task, long likeCount, boolean liked) {
 		return new MusicExploreItemVO(
 				a.getId(),
 				a.getAssetId(),
@@ -28,6 +30,7 @@ public class MusicExploreItemVO {
 				a.getDurationSec(),
 				task != null ? task.getPrompt() : "",
 				likeCount,
+				liked,
 				a.getCreateTime());
 	}
 }
