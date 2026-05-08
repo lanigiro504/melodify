@@ -1,0 +1,16 @@
+# 测试 Profile：集成测试（Testcontainers MySQL）与单元测试共用。
+# 禁用 Redis 自动配置（依赖已引入但业务未使用，避免无 Redis 时启动失败）；
+# 关闭调度器，避免任务恢复轮询在测试中触发外部调用。
+
+spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+  task:
+    scheduling:
+      enabled: false
+
+melodify:
+  music-generation:
+    # 测试中不经由真实 Suno 网络；由集成测试加载的容器库保证扣费等用例可跑。
+    provider: simulated

@@ -13,3 +13,6 @@ melodify-backend/.env
 
 # 后端本地生成的用户头像与镜像音频目录
 melodify-backend/data/
+
+# 仓库根目录本地运行时数据（头像等），勿提交
+/data/
