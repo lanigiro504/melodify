@@ -16,3 +16,6 @@ melodify-backend/data/
 
 # 仓库根目录本地运行时数据（头像等），勿提交
 /data/
+/.agents/
+/.claude/
+/.cursor/
